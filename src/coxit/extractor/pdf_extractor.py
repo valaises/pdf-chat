@@ -1,4 +1,3 @@
-import re
 import logging
 import pathlib
 
@@ -9,9 +8,9 @@ import fitz
 import pymupdf
 import pymupdf4llm
 
-import doc_search.extactor.coxit.const as c
+import coxit.extractor.const as c
 from core.logger import debug, exception
-from doc_search.extactor.coxit.page_classifier import PageType, PDFPageClassifier
+from coxit.extractor.page_classifier import PageType, PDFPageClassifier
 
 RangeDict = Dict[str, int]
 SectionDict = Dict[str, RangeDict]

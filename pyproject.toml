@@ -4,7 +4,26 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "aiohttp>=3.11.14",
+    "fastapi>=0.115.11",
+    "fitz>=0.0.1.dev2",
+    "openai>=1.68.2",
+    "pymupdf>=1.25.4",
+    "pymupdf4llm>=0.0.17",
+    "termcolor>=2.5.0",
+    "uvicorn>=0.34.0",
+    "uvloop>=0.21.0",
+]
 
 [tool.uv.workspace]
-members = ["core"]
+members = [
+    "src/core",
+    "src/coxit",
+    "src/openai",
+]
+
+[tool.uv.sources]
+core = { workspace = true }
+coxit = { workspace = true }
+openai = { workspace = true }

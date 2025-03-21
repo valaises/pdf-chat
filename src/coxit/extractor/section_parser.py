@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, List
 
 from core.logger import debug
-import doc_search.extactor.coxit.const as c
+import coxit.extractor.const as c
 
 
 RangeDict = Dict[str, int]

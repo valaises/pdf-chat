@@ -1,0 +1,14 @@
+
+services:
+  app:
+    build: .
+    container_name: "coxit_docs_mcp"
+    env_file:
+      - .env
+    ports:
+      - "8011:8011"
+    volumes:
+      - ./db:/app/db
+      - ./logs:/app/logs
+      - ./files:/app/files
+    restart: unless-stopped

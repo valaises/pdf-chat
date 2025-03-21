@@ -1,13 +1,11 @@
 """
 File reader executor module.
 """
-import logging
 from typing import Optional
 
-from doc_search.extactor.coxit.pdf_extractor import PDFExtractor
-from doc_search.extactor.coxit.section_parser import SectionContentData, SectionParserFromText, SectionParserFromDict
-
-logger: logging.Logger = logging.getLogger(__name__)
+from core.logger import error, debug
+from coxit.extractor.pdf_extractor import PDFExtractor
+from coxit.extractor.section_parser import SectionContentData, SectionParserFromText, SectionParserFromDict
 
 
 
@@ -43,11 +41,11 @@ class FileReader:
         )
 
         if len(extracted_text_list) == 0:
-            logger.error("There are no text extracted from PDF.")
+            error("There are no text extracted from PDF.")
             return None
 
         sections_dict = extractor.extract_sections_from_colontitles()
-        logger.info(
+        debug(
             f"Extracted sections from "
             f"colontitles: {sections_dict}"
         )
@@ -62,7 +60,7 @@ class FileReader:
                 extracted_text_list
             )
 
-            logger.info(
+            debug(
                 f"{len(extracted_text)=!r}, "
             )
 

@@ -11,7 +11,7 @@ from core.globals import BASE_DIR
 __all__ = ['init_logger', 'info', 'error', 'warn', 'debug', 'exception']
 
 
-logger = logging.getLogger("SBACK")
+logger = logging.getLogger("CWPP")
 info = logger.info
 error = logger.error
 warn = logger.warning

@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aiofiles>=24.1.0",
     "aiohttp>=3.11.14",
     "fastapi>=0.115.11",
     "fitz>=0.0.1.dev2",
@@ -12,18 +13,21 @@ dependencies = [
     "pymupdf>=1.25.4",
     "pymupdf4llm>=0.0.17",
     "termcolor>=2.5.0",
+    "ujson>=5.10.0",
     "uvicorn>=0.34.0",
     "uvloop>=0.21.0",
 ]
 
 [tool.uv.workspace]
 members = [
+    "src/chat_toolbox",
     "src/core",
     "src/coxit",
-    "src/openai",
+    "src/openai_wrappers",
 ]
 
 [tool.uv.sources]
+chat_toolbox = { workspace = true }
 core = { workspace = true }
 coxit = { workspace = true }
-openai = { workspace = true }
+openai_wrappers = { workspace = true }

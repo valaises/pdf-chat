@@ -4,6 +4,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from core.repositories.repo_files import FilesRepository
 from core.routers.router_files import FilesRouter
+from core.routers.router_mcp_like import MCPLikeRouter
 
 
 __all__ = ["App"]
@@ -40,6 +41,9 @@ class App(FastAPI):
 
     def _routers(self):
         return [
+            MCPLikeRouter(
+                self.files_repository,
+            ),
             FilesRouter(
                 self.files_repository,
             ),

@@ -1,20 +1,11 @@
-import threading
 import signal
 import asyncio
-from dataclasses import dataclass
 from typing import List
 
 import uvicorn
 
 from core.logger import warn, info
-
-
-@dataclass
-class Worker:
-    """Structure to hold worker thread and its stop event"""
-    name: str
-    thread: threading.Thread
-    stop_event: threading.Event
+from core.workers.w_abstract import Worker
 
 
 class Server(uvicorn.Server):

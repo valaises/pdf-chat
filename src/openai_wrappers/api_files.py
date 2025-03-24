@@ -1,6 +1,7 @@
-from typing import Literal, Iterable
+from typing import Literal, List, Optional
 
 from openai import OpenAI
+from openai.types.file_object import FileObject
 from dataclasses import dataclass
 
 from core.logger import warn
@@ -13,8 +14,8 @@ class FileUpload:
     purpose: Literal["assistants", "fine-tune", "vision", "batch"]
 
 
-async def files_list(limit=1_000):
-    client = OpenAI()
+def files_list(limit=1_000, client: Optional[OpenAI] = None) -> List[FileObject]:
+    client = client or OpenAI()
 
     files = list(client.files.list(limit=limit))
     if len(files) == limit:
@@ -30,10 +31,7 @@ async def files_list(limit=1_000):
     return files
 
 
-async def files_upload(files: Iterable[FileUpload]):
-    client = OpenAI()
-    responses = []
-    for file in files:
-        resp = client.files.create(file=(file.filename, file.file_data), purpose=file.purpose)
-        responses.append(resp)
-    return responses
+def file_upload(file: FileUpload, client: Optional[OpenAI] = None) -> FileObject:
+    client = client or OpenAI()
+    resp = client.files.create(file=(file.filename, file.file_data), purpose=file.purpose)
+    return resp

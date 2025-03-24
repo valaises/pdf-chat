@@ -1,13 +1,13 @@
 import asyncio
-import json
+import ujson as json
 import threading
 
 from pathlib import Path
-from typing import Tuple
 
 from core.globals import FILES_DIR
 from core.logger import info
 from core.repositories.repo_files import FilesRepository
+from core.workers.w_abstract import Worker
 from coxit.extractor.file_reader import FileReader
 
 
@@ -63,7 +63,7 @@ def worker(
 
 def spawn_worker(
         files_repository: FilesRepository,
-) -> Tuple[threading.Event, threading.Thread]:
+) -> Worker:
     stop_event = threading.Event()
     worker_thread = threading.Thread(
         target=worker,
@@ -72,4 +72,4 @@ def spawn_worker(
     )
     worker_thread.start()
 
-    return stop_event, worker_thread
+    return Worker("worker_extractor", worker_thread, stop_event)

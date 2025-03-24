@@ -7,7 +7,7 @@ from core.globals import BASE_DIR
 from core.logger import init_logger, info
 from core.app import App
 from core.repositories.repo_files import FilesRepository
-from core.server import Server, Worker, setup_signal_handlers
+from core.server import Server, setup_signal_handlers
 
 from core.workers.w_extractor import spawn_worker as spawn_worker_doc_extractor
 from core.workers.w_processor import spawn_worker as spawn_worker_doc_processor
@@ -22,19 +22,8 @@ def main():
     db_dir.mkdir(parents=True, exist_ok=True)
 
     files_repository = FilesRepository(db_dir / "files.db")
-    doc_e_stop, doc_e_thread = spawn_worker_doc_extractor(files_repository)
-    doc_p_stop, doc_p_thread = spawn_worker_doc_processor(files_repository)
-
-    doc_e_worker = Worker(
-        name="doc_extractor_thread",
-        thread=doc_e_thread,
-        stop_event=doc_e_stop
-    )
-    doc_p_worker = Worker(
-        name="doc_processor_thread",
-        thread=doc_p_thread,
-        stop_event=doc_p_stop
-    )
+    doc_e_worker = spawn_worker_doc_extractor(files_repository)
+    doc_p_worker = spawn_worker_doc_processor(files_repository)
 
     app = App(
         files_repository,

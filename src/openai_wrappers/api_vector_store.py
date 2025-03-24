@@ -1,0 +1,134 @@
+import aiohttp
+from openai import OpenAI
+from dataclasses import dataclass
+from typing import List, Optional, Dict, Union
+
+from core.logger import error
+
+
+@dataclass
+class VectorStoreFileCreate:
+    vector_store_id: str
+    file_id: str
+    attributes: Optional[Dict[str, Union[str, bool, int, float]]] = None
+    chunking_strategy: Optional[Dict] = None
+
+
+@dataclass
+class VectorStoreCreate:
+    name: str
+    file_ids: Optional[List[str]] = None
+
+
+@dataclass
+class VectorStoreSearch:
+    vector_store_id: str
+    query: str
+    max_num_results: Optional[int] = 10
+
+
+@dataclass
+class VectorStoreFilesList:
+    vector_store_id: str
+    limit: int = 100
+
+
+def vector_store_create(data: VectorStoreCreate, client: Optional[OpenAI] = None):
+    client = client or OpenAI()
+
+    vector_store = client.vector_stores.create(
+        name=data.name,
+        file_ids=data.file_ids,
+    )
+
+    return vector_store
+
+
+def vector_stores_list(client: Optional[OpenAI] = None):
+    client = client or OpenAI()
+
+    vector_stores = client.vector_stores.list()
+    return vector_stores
+
+
+def vector_store_retrieve(vector_store_id: str, client: Optional[OpenAI] = None):
+    client = client or OpenAI()
+
+    vector_store = client.vector_stores.retrieve(vector_store_id=vector_store_id)
+    return vector_store
+
+
+def vector_store_file_create(data: VectorStoreFileCreate, client: Optional[OpenAI] = None):
+    client = client or OpenAI()
+
+    params = {
+        "file_id": data.file_id
+    }
+
+    if data.attributes:
+        params["attributes"] = data.attributes
+
+    if data.chunking_strategy:
+        params["chunking_strategy"] = data.chunking_strategy
+
+    vector_store_file = client.vector_stores.files.create(
+        vector_store_id=data.vector_store_id,
+        **params
+    )
+
+    return vector_store_file
+
+
+def vector_store_files_list(data: VectorStoreFilesList, client: Optional[OpenAI] = None):
+    client = client or OpenAI()
+
+    files = list(client.vector_stores.files.list(
+        vector_store_id=data.vector_store_id,
+        limit=data.limit
+    ))
+
+    if len(files) == data.limit:
+        while True:
+            try:
+                batch = list(client.vector_stores.files.list(
+                    vector_store_id=data.vector_store_id,
+                    limit=data.limit,
+                    after=(files[-1] or {}).get("id")
+                ))
+                files.extend(batch)
+                if len(batch) != data.limit:
+                    break
+            except Exception as e:
+                error(f"Error fetching additional vector store files: {e}")
+                break
+
+    return files
+
+
+async def vector_store_search(data: VectorStoreSearch):
+    api_key = OpenAI().api_key
+
+    url = f"https://api.openai.com/v1/vector_stores/{data.vector_store_id}/search"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "query": data.query,
+        "max_num_results": data.max_num_results
+    }
+
+    if hasattr(data, 'filters') and data.filters:
+        payload["filters"] = data.filters
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, json=payload) as resp:
+            if resp.status == 200:
+                result = await resp.json()
+                return result
+            else:
+                error_text = await resp.text()
+                text = f"Error searching vector store: {error_text}"
+                error(text)
+                raise Exception(text)

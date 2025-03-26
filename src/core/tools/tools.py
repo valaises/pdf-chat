@@ -51,7 +51,5 @@ def get_tools_list() -> List[ChatTool]:
     return [t.as_chat_tool() for t in TOOLS]
 
 
-def get_tool_props() -> Dict[str, ToolProps]:
-    return {
-        t.name: t.props() for t in TOOLS
-    }
+def get_tool_props() -> List[ToolProps]:
+    return [t.props() for t in TOOLS]

@@ -18,7 +18,7 @@ SYSTEM = """TOOL: search_in_doc
         
         When search_in_doc is called, vector search is performed: search(query, chunks_of_doc), and most relevant chunks are retrieved
         
-        Call any condition bellow is met:
+        Call when any condition bellow is met:
         * User asks a question about a document or related to a document
         * User directly asks to search in the document
         
@@ -91,7 +91,7 @@ class SearchInFile(Tool):
                 )
             ]
 
-        document = next((f for f in files if f.file_name == document_name), None)
+        document = next((f for f in files if f.file_name_orig == document_name), None)
         if not document:
             return False, [
                 build_tool_call(
@@ -149,16 +149,14 @@ class SearchInFile(Tool):
                     properties={
                         "document_name": ChatToolParameterProperty(
                             type="string",
-                            description="The name of the document to search within."
+                            description="The name of the document to search within.",
+                            enum=[]
                         ),
                         "query": ChatToolParameterProperty(
                             type="string",
-                            description="The search query to find relevant information."
+                            description="The search query to find relevant information.",
+                            enum=[]
                         ),
-                        "filters": ChatToolParameterProperty(
-                            type="object",
-                            description="Optional filters to refine search results."
-                        )
                     },
                     required=["document_name", "query"]
                 )
@@ -166,7 +164,8 @@ class SearchInFile(Tool):
         )
 
     def props(self):
-        ToolProps(
+        return ToolProps(
+            tool_name=self.name,
             system_prompt=SYSTEM,
             depends_on=["list_documents"]
         )

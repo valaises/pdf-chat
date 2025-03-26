@@ -9,7 +9,7 @@ from core.tools.tool_context import ToolContext
 SYSTEM = """TOOL: list_documents
         Use this tool to list the documents that can be used for context.
         
-        Call any condition bellow is met:
+        Call when any condition bellow is met:
         * User implies desire to chat about a document -- call this tool to verify it exists
         * Check the processing_status of a document, re-check if document.processing_status was previously not complete
         
@@ -47,7 +47,8 @@ class ToolListFiles(Tool):
             return True, [
                 build_tool_call(
                     json.dumps([{
-                        **f.model_dump(),
+                        "file_name": f.file_name_orig,
+                        "processing_status": f.processing_status,
                         "available_filters": ["section_name"]
                     }
                         for f in files], indent=2),
@@ -77,6 +78,7 @@ class ToolListFiles(Tool):
         )
 
     def props(self):
-        ToolProps(
+        return ToolProps(
+            tool_name=self.name,
             system_prompt=SYSTEM,
         )

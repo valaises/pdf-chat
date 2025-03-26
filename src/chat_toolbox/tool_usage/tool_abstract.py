@@ -14,8 +14,9 @@ def build_tool_call(content: Any, tool_call: ToolCall) -> ChatMessageTool:
 
 
 class ToolProps(BaseModel):
+    tool_name: str
     system_prompt: Optional[str] = None
-    depends_on: List[str] = Field(default_factory=list)
+    depends_on: Optional[List[str]] = None
     # confirmation loop prompt ?
 
 

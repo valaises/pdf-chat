@@ -25,7 +25,7 @@ class MCPLikeRouter(APIRouter):
         self._files_repository = files_repository
 
         self.add_api_route("/v1/tools", self._tools, methods=["GET"])
-        self.add_api_route("/v1/tools-execute", self._tools, methods=["POST"])
+        self.add_api_route("/v1/tools-execute", self._execute_tools, methods=["POST"])
         self.add_api_route("/v1/tools-props", self._tool_props, methods=["GET"])
 
     async def _tools(self):
@@ -55,10 +55,11 @@ class MCPLikeRouter(APIRouter):
         # as tools is standardized under OpenAI format, we should not include any additional fields,
         # => props moved into its own endpoint
         content = {
-            "props": {
-                tool: props.model_dump()
-                for tool, props in get_tool_props().items()
-            }
+            "props": [
+                props.model_dump()
+                for props in get_tool_props()
+                if props
+            ]
         }
         return Response(
             content=json.dumps(content, indent=2),

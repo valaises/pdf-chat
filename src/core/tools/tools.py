@@ -1,17 +1,24 @@
 import json
-from typing import List, Any, Dict
+from typing import List, Dict
 
 from chat_toolbox.chat_models import ChatMessage, ChatMessageTool, ChatTool
-from chat_toolbox.tool_usage.tool_abstract import Tool, build_tool_call
+from chat_toolbox.tool_usage.tool_abstract import Tool, build_tool_call, ToolProps
 from chat_toolbox.tool_usage.tool_utils import messages_since_last_user_message, get_unanswered_tool_calls
+from core.tools.tool_context import ToolContext
+from core.tools.tool_list_files import ToolListFiles
+from core.tools.tool_search_in_file import SearchInFile
+
+
+__all__ = ['execute_tools', 'get_tools_list', 'get_tool_props']
 
 
 TOOLS: List[Tool] = [
-
+    ToolListFiles(),
+    SearchInFile(),
 ]
 
 
-def execute_tools(ctx: Any, messages: List[ChatMessage]) -> List[ChatMessageTool]:
+async def execute_tools(ctx: ToolContext, messages: List[ChatMessage]) -> List[ChatMessageTool]:
     messages = messages_since_last_user_message(messages)
 
     tool_res_messages = []
@@ -28,13 +35,13 @@ def execute_tools(ctx: Any, messages: List[ChatMessage]) -> List[ChatMessageTool
             ))
             continue
 
-        ok, msgs = tool.validate_tool_call_args(tool_call, args)
+        ok, msgs = tool.validate_tool_call_args(ctx, tool_call, args)
         tool_res_messages.extend(msgs)
 
         if not ok:
             continue
 
-        _ok, msgs = tool.execute(ctx, tool_call, args)
+        _ok, msgs = await tool.execute(ctx, tool_call, args)
         tool_res_messages.extend(msgs)
 
     return tool_res_messages
@@ -44,7 +51,7 @@ def get_tools_list() -> List[ChatTool]:
     return [t.as_chat_tool() for t in TOOLS]
 
 
-def get_system_prompts() -> Dict[str, str]:
+def get_tool_props() -> Dict[str, ToolProps]:
     return {
-        t.name: t.system_prompt() for t in TOOLS
+        t.name: t.props() for t in TOOLS
     }

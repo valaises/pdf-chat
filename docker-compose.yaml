@@ -2,7 +2,7 @@
 services:
   app:
     build: .
-    container_name: "coxit_docs_mcp"
+    container_name: "coxit_docs_search_mcp"
     env_file:
       - .env
     ports:

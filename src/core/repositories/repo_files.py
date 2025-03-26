@@ -1,5 +1,4 @@
 import sqlite3
-from dataclasses import dataclass
 from datetime import datetime
 from typing import List
 
@@ -14,6 +13,7 @@ class FileItem(BaseModel):
     user_id: int
     created_at: datetime
     processing_status: str = ""
+    vector_store_id: str = ""
 
 
 class FilesRepository(AbstractRepository):
@@ -29,9 +29,16 @@ class FilesRepository(AbstractRepository):
                 file_name_orig TEXT NOT NULL,
                 user_id INTEGER NOT NULL,
                 created_at TIMESTAMP NOT NULL,
-                processing_status TEXT DEFAULT ''
+                processing_status TEXT DEFAULT '',
+                vector_store_id TEXT DEFAULT ''
             )
             """)
+
+            # Add vector_store_id column if it doesn't exist
+            try:
+                conn.execute("ALTER TABLE user_files ADD COLUMN vector_store_id TEXT DEFAULT ''")
+            except sqlite3.OperationalError:
+                pass
 
             conn.commit()
 
@@ -41,15 +48,16 @@ class FilesRepository(AbstractRepository):
                 conn.execute(
                     """
                     INSERT INTO user_files 
-                    (file_name, file_name_orig, user_id, created_at, processing_status)
-                    VALUES (?, ?, ?, ?, ?)
+                    (file_name, file_name_orig, user_id, created_at, processing_status, vector_store_id)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (
                         file.file_name,
                         file.file_name_orig,
                         file.user_id,
                         file.created_at.isoformat(),
-                        file.processing_status
+                        file.processing_status,
+                        file.vector_store_id
                     )
                 )
                 conn.commit()
@@ -70,7 +78,7 @@ class FilesRepository(AbstractRepository):
         """
         with self._get_db_connection() as conn:
             query = f"""
-            SELECT file_name, user_id, created_at, processing_status
+            SELECT file_name, file_name_orig, user_id, created_at, processing_status, vector_store_id
             FROM user_files
             WHERE {filter}
             ORDER BY created_at DESC
@@ -81,9 +89,11 @@ class FilesRepository(AbstractRepository):
             for row in cursor.fetchall():
                 files.append(FileItem(
                     file_name=row[0],
-                    user_id=row[1],
-                    created_at=datetime.fromisoformat(row[2]),
-                    processing_status=row[3]
+                    file_name_orig=row[1],
+                    user_id=row[2],
+                    created_at=datetime.fromisoformat(row[3]),
+                    processing_status=row[4],
+                    vector_store_id=row[5]
                 ))
 
             return files
@@ -110,7 +120,7 @@ class FilesRepository(AbstractRepository):
         with self._get_db_connection() as conn:
             cursor = conn.execute(
                 """
-                SELECT file_name, file_name_orig, user_id, created_at, processing_status
+                SELECT file_name, file_name_orig, user_id, created_at, processing_status, vector_store_id
                 FROM user_files
                 ORDER BY created_at DESC
                 """
@@ -123,7 +133,8 @@ class FilesRepository(AbstractRepository):
                     file_name_orig=row[1],
                     user_id=row[2],
                     created_at=datetime.fromisoformat(row[3]),
-                    processing_status=row[4]
+                    processing_status=row[4],
+                    vector_store_id=row[5]
                 ))
 
             return files
@@ -144,7 +155,7 @@ class FilesRepository(AbstractRepository):
                 cursor = conn.execute(
                     """
                     UPDATE user_files 
-                    SET file_name_orig = ?, user_id = ?, created_at = ?, processing_status = ?
+                    SET file_name_orig = ?, user_id = ?, created_at = ?, processing_status = ?, vector_store_id = ?
                     WHERE file_name = ?
                     """,
                     (
@@ -152,6 +163,7 @@ class FilesRepository(AbstractRepository):
                         file_item.user_id,
                         file_item.created_at.isoformat(),
                         file_item.processing_status,
+                        file_item.vector_store_id,
                         file_name
                     )
                 )
@@ -214,7 +226,8 @@ class FilesRepository(AbstractRepository):
                 file_name_orig="new_name.pdf",
                 user_id=123,
                 created_at=datetime.now(),
-                processing_status="completed"
+                processing_status="completed",
+                vector_store_id="vs_123456"
             )
             success = await repo.update_file("document.pdf", updated_file)
         """

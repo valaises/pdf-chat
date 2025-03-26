@@ -1,14 +1,22 @@
 from typing import List, Dict, Any, Optional
+from pydantic import BaseModel, Field
 
 from chat_toolbox.chat_models import ChatMessageTool, ToolCall, ChatMessage, ChatTool
+from core.tools.tool_context import ToolContext
 
 
-def build_tool_call(content: str, tool_call: ToolCall) -> ChatMessageTool:
+def build_tool_call(content: Any, tool_call: ToolCall) -> ChatMessageTool:
     return ChatMessageTool(
         role="tool",
         content=content,
         tool_call_id=tool_call.id
     )
+
+
+class ToolProps(BaseModel):
+    system_prompt: Optional[str] = None
+    depends_on: List[str] = Field(default_factory=list)
+    # confirmation loop prompt ?
 
 
 class Tool:
@@ -25,7 +33,7 @@ class Tool:
         """
         raise NotImplementedError("property 'name' is not implemented for tool")
 
-    def validate_tool_call_args(self, tool_call: ToolCall, args: Dict[str, Any]) -> (bool, List[ChatMessage]):
+    def validate_tool_call_args(self, ctx: ToolContext, tool_call: ToolCall, args: Dict[str, Any]) -> (bool, List[ChatMessage]):
         """
         Validate that the provided tool call and arguments are compatible with this tool.
 
@@ -34,6 +42,7 @@ class Tool:
         and any other tool-specific validation rules.
 
         Args:
+            ctx (ToolContext): The context in which the tool is being called
             tool_call (ToolCall): The tool call to validate, containing function
                                   details and parameters.
             args (Dict[str, Any]): The arguments to validate, containing function
@@ -52,7 +61,7 @@ class Tool:
         """
         raise NotImplementedError(f"method 'validate_tool_call_args' is not implemented for tool {self.name}")
 
-    def execute(self, ctx: Optional[Any], tool_call: ToolCall, args: Dict[str, Any], ) -> (bool, List[ChatMessage]):
+    async def execute(self, ctx: Optional[Any], tool_call: ToolCall, args: Dict[str, Any], ) -> (bool, List[ChatMessage]):
         """
         Execute the tool with the provided tool call and return execution results.
 
@@ -93,18 +102,5 @@ class Tool:
         """
         raise NotImplementedError(f"method 'as_chat_tool' is not implemented for tool {self.name}")
 
-    def system_prompt(self) -> str:
-        """
-        Provide a system prompt for the tool.
-
-        This method should return a string that represents a system prompt or message
-        that can be used to guide the user or provide context about the tool's functionality.
-
-        Returns:
-            str: A system prompt or message related to the tool.
-
-        Raises:
-            NotImplementedError: This is an abstract method that must be implemented by concrete tool classes.
-        """
-        raise NotImplementedError(f"method 'system_prompt' is not implemented for tool {self.name}")
-
+    def props(self) -> ToolProps:
+        raise NotImplementedError(f"method 'props' is not implemented for tool {self.name}")

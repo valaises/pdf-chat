@@ -1,7 +1,7 @@
 import aiohttp
 from openai import OpenAI
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Any, Literal
 
 from core.logger import error
 
@@ -21,16 +21,45 @@ class VectorStoreCreate:
 
 
 @dataclass
+class VectorStoreFilesList:
+    vector_store_id: str
+    limit: int = 100
+
+
+@dataclass
+class VectorStoreSearchFilterComparison:
+    type: Literal["eq", "ne", "lt", "lte", "gt", "gte"]
+    property: str
+    value: str
+
+
+@dataclass
+class VectorStoreSearchFilterCompound:
+    type: Literal["and", "or"]
+    filters: List[VectorStoreSearchFilterComparison]
+
+
+@dataclass
 class VectorStoreSearch:
     vector_store_id: str
     query: str
+    filters: Optional[List[VectorStoreSearchFilterCompound | VectorStoreSearchFilterComparison]] = None
     max_num_results: Optional[int] = 10
 
 
 @dataclass
-class VectorStoreFilesList:
-    vector_store_id: str
-    limit: int = 100
+class VectorStoreSearchRespItemContentItem:
+    type: str
+    text: str
+
+
+@dataclass
+class VectorStoreSearchRespItem:
+    file_id: str
+    filename: str
+    score: float
+    content: List[VectorStoreSearchRespItemContentItem]
+    attributes: Optional[Dict[str, Any]] = None
 
 
 def vector_store_create(data: VectorStoreCreate, client: Optional[OpenAI] = None):
@@ -105,7 +134,7 @@ def vector_store_files_list(data: VectorStoreFilesList, client: Optional[OpenAI]
     return files
 
 
-async def vector_store_search(data: VectorStoreSearch):
+async def vector_store_search(data: VectorStoreSearch) -> List[VectorStoreSearchRespItem]:
     api_key = OpenAI().api_key
 
     url = f"https://api.openai.com/v1/vector_stores/{data.vector_store_id}/search"
@@ -126,7 +155,35 @@ async def vector_store_search(data: VectorStoreSearch):
         async with session.post(url, headers=headers, json=payload) as resp:
             if resp.status == 200:
                 result = await resp.json()
-                return result
+
+                try:
+                    # Convert raw results to VectorStoreSearchRespItem objects
+                    items = []
+                    for item in result["data"]:
+                        content_items = []
+                        for content in item['content']:
+                            content_items.append(VectorStoreSearchRespItemContentItem(
+                                type=content['type'],
+                                text=content['text']
+                            ))
+
+                        items.append(VectorStoreSearchRespItem(
+                            file_id=item['file_id'],
+                            filename=item['filename'],
+                            score=item['score'],
+                            content=content_items,
+                            attributes=item.get('attributes')
+                        ))
+
+                    return items
+                except KeyError as e:
+                    error_msg = f"Failed to convert search results: Missing required field {e}"
+                    error(error_msg)
+                    raise ValueError(error_msg)
+                except Exception as e:
+                    error_msg = f"Failed to convert search results: {str(e)}"
+                    error(error_msg)
+                    raise ValueError(error_msg)
             else:
                 error_text = await resp.text()
                 text = f"Error searching vector store: {error_text}"

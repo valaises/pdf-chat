@@ -28,7 +28,8 @@ def main():
     app = App(
         files_repository,
         docs_url=None,
-        redoc_url=None
+        redoc_url=None,
+        openapi_url="/api/v1/openapi.json"
     )
 
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())

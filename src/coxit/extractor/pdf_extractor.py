@@ -4,7 +4,7 @@ import pathlib
 from collections import Counter
 from typing import Set, Dict
 
-import fitz
+# Use only pymupdf, not fitz (they're the same package)
 import pymupdf
 import pymupdf4llm
 
@@ -42,7 +42,7 @@ class PDFExtractor:
     DIR_PATH: str = "data/pdf_processing/"
     PDF_FILE_PATH: str = DIR_PATH + "pymupdf_edited_pdf"
     MD_FILE_PATH: str = DIR_PATH + "pymupdf_md"
-    A4_RECT = fitz.Rect(0, 0, 595.44, 841.68)
+    A4_RECT = pymupdf.Rect(0, 0, 595.44, 841.68)
     classifier_result: list[PageType] = []
 
     def __init__(self, file_data: bytes, file_name: str) -> None:
@@ -65,11 +65,11 @@ class PDFExtractor:
 
     def __delete_candidates(
         self,
-        page: fitz.Page,
+        page: pymupdf.Page,
         header_candidates: list[str],
         footer_candidates: list[str],
-        header_clip: fitz.Rect,
-        footer_clip: fitz.Rect
+        header_clip: pymupdf.Rect,
+        footer_clip: pymupdf.Rect
     ) -> tuple[list[str], list[str]]:
         removed_headers, removed_footers = [], []
         for line in header_candidates:
@@ -273,11 +273,11 @@ class PDFExtractor:
 
         return result, pdf_page_count
 
-    def _remove_annotations(self) -> fitz.Document:
+    def _remove_annotations(self) -> pymupdf.Document:
         # Remove all annotations from the PDF.
         # Annotations are vector drawings, and they can mislead the
         # classification of pages as drawing pages or specification pages.
-        uploaded_pdf = fitz.open(self._file_name, self._file_data)
+        uploaded_pdf = pymupdf.open(self._file_name, self._file_data)
         for page_num in range(uploaded_pdf.page_count):
             page = uploaded_pdf.load_page(page_num)
             for xref in page.annot_xrefs():
@@ -296,9 +296,9 @@ class PDFExtractor:
                         exception(err_str)
         return uploaded_pdf
 
-    def _clear_drawing_pages(self, pdf: fitz.Document) -> fitz.Document:
+    def _clear_drawing_pages(self, pdf: pymupdf.Document) -> pymupdf.Document:
 
-        new_pdf = fitz.open()
+        new_pdf = pymupdf.open()
 
         # This function basically creates a copy of the input doc but replaces
         # all drawing pages with blank pages.
@@ -323,7 +323,7 @@ class PDFExtractor:
 
         return new_pdf
 
-    def _add_page_numbers(self, pdf: fitz.Document) -> fitz.Document:
+    def _add_page_numbers(self, pdf: pymupdf.Document) -> pymupdf.Document:
         # Add text to each page
         for page_num in range(pdf.page_count):
             page = pdf.load_page(page_num)
@@ -386,7 +386,7 @@ class PDFExtractor:
 
     def _get_common_header_words(
             self,
-            pdf_file: fitz.Document,
+            pdf_file: pymupdf.Document,
             percentage: float,
             min_occurrences: int,
             top_right_x: int = 0,
@@ -399,7 +399,7 @@ class PDFExtractor:
         occurrence on at least half the pages.
 
         Args:
-            pdf_file (fitz.Document): The PDF document to analyze.
+            pdf_file (pymupdf.Document): The PDF document to analyze.
 
             percentage (float): Fraction of the page height
                 for the header/footer region.
@@ -421,7 +421,7 @@ class PDFExtractor:
 
         for page in pdf_file:
             page_width, page_height = page.rect.width, page.rect.height
-            clip_rect = fitz.Rect(
+            clip_rect = pymupdf.Rect(
                 top_right_x,
                 top_right_y,
                 page_width,
@@ -466,13 +466,13 @@ class PDFExtractor:
 
         return all(char in self.ALLOWED_CHARS for char in word)
 
-    def _get_headers_height(self, pdf_file: fitz.Document) -> float:
+    def _get_headers_height(self, pdf_file: pymupdf.Document) -> float:
         """
         Determine the height distance from the top edge of the page
         to the most bottom edge of all common words in the header in the PDF.
 
         Args:
-            pdf_file (fitz.Document): The PDF document to analyze.
+            pdf_file (pymupdf.Document): The PDF document to analyze.
 
         Returns:
             float: The maximum header height in pixels.
@@ -500,7 +500,7 @@ class PDFExtractor:
 
             for word in common_words:
                 headers_candidates = page.search_for(
-                    word, clip=fitz.Rect(
+                    word, clip=pymupdf.Rect(
                         self.TOP_RIGHT_X,
                         self.TOP_RIGHT_Y,
                         page_width,
@@ -518,7 +518,7 @@ class PDFExtractor:
         return max_header_height
 
     def _extract_sections_from_headers(
-            self, pdf_file: fitz.Document
+            self, pdf_file: pymupdf.Document
     ) -> SectionDict:
         """
         Extracts sections from headers in a PDF file.
@@ -553,7 +553,7 @@ class PDFExtractor:
             # Extract text from the upper header region of the page
             top_text = page.get_text(
                 "text",
-                clip=fitz.Rect(
+                clip=pymupdf.Rect(
                     self.TOP_RIGHT_X,
                     self.TOP_RIGHT_Y,
                     page_width,
@@ -614,7 +614,7 @@ class PDFExtractor:
         return sections
 
     def _extract_sections_from_footers(
-            self, pdf_file: fitz.Document
+            self, pdf_file: pymupdf.Document
     ) -> SectionDict:
         """
         Extracts sections from footers of a given PDF file.
@@ -642,7 +642,7 @@ class PDFExtractor:
 
             bottom_text = page.get_text(
                 "text",
-                clip=fitz.Rect(
+                clip=pymupdf.Rect(
                     self.TOP_RIGHT_X,
                     page_height * self.FOOTER_SEARCH_PERCENTAGE,
                     page_width,
@@ -710,7 +710,7 @@ class PDFExtractor:
             'start' and 'end' page numbers.
         """
         sections_dict = {}
-        uploaded_pdf = fitz.open(self._file_name, self._file_data)
+        uploaded_pdf = pymupdf.open(self._file_name, self._file_data)
 
         sections_from_headers = self._extract_sections_from_headers(
             uploaded_pdf

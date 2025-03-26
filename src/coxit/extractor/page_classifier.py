@@ -1,6 +1,7 @@
 import os
 
-import fitz
+# Use pymupdf instead of fitz (they're the same package)
+import pymupdf
 from enum import Enum
 
 from core.logger import debug
@@ -37,7 +38,7 @@ class PDFPageClassifier:
             area covered by text blocks to classify a page as unclassified.
         SPEC_PAGE_MIN_VECTOR_COUNT_THRESHOLD (int): The minimum number of vector images to classify a page
             as a specification page.
-        pdf_doc (fitz.Document): The PDF document to classify.
+        pdf_doc (pymupdf.Document): The PDF document to classify.
     """
 
     PAGE_TOP_AREA_PERCENTAGE_LIMIT = 0.2  # 20% of the page height
@@ -49,13 +50,13 @@ class PDFPageClassifier:
 
     def __init__(
         self,
-        pdf_doc: fitz.Document,
+        pdf_doc: pymupdf.Document,
     ):
         """
         Initialize the PDFPageClassifier with the provided PDF document.
 
         Args:
-            pdf_doc (fitz.Document): The PDF document to classify.
+            pdf_doc (pymupdf.Document): The PDF document to classify.
         """
         self.pdf_doc = pdf_doc
 
@@ -80,7 +81,7 @@ class PDFPageClassifier:
 
         return result
 
-    def classify_page(self, page: fitz.Page, page_number: int) -> PageType:
+    def classify_page(self, page: pymupdf.Page, page_number: int) -> PageType:
         """Determines whether a page is a 'specification page' or a
         'drawing page'.
 
@@ -90,7 +91,7 @@ class PDFPageClassifier:
         this limit, the page is classified as a 'drawing page'.
 
         Args:
-            page (fitz.Page): The PDF page to classify.
+            page (pymupdf.Page): The PDF page to classify.
             page_number (int): The page number in the PDF document.
 
         Returns:
@@ -129,13 +130,13 @@ class PDFPageClassifier:
         return result
 
     def _is_page_too_big_for_a_text_page(self,
-                                         page: fitz.Page,
+                                         page: pymupdf.Page,
                                          page_number: int) -> bool:
         """Check if the page is too big to be a text page without drawings.
         Usually, the text page size is less than N KB.
 
         Args:
-            page (fitz.Page): The PDF page to check.
+            page (pymupdf.Page): The PDF page to check.
             page_number (int): The page number in the PDF document.
 
         Returns:
@@ -143,7 +144,7 @@ class PDFPageClassifier:
         """
         # Save the page to a new PDF file in the /tmp directory
         tmp_pdf_path = f"/tmp/temp_page_{page.number}.pdf"
-        new_pdf = fitz.open()
+        new_pdf = pymupdf.open()
         new_pdf.insert_pdf(page.parent, from_page=page_number, to_page=page_number)
         new_pdf.save(tmp_pdf_path)
         new_pdf.close()
@@ -157,7 +158,7 @@ class PDFPageClassifier:
 
         return file_size_kb > MAX_TEXT_PAGE_SIZE_KB
 
-    def _count_vector_images(self, page: fitz.Page, top_limit: float) -> int:
+    def _count_vector_images(self, page: pymupdf.Page, top_limit: float) -> int:
         """
         Estimate the number of significant vector drawings on the page.
 
@@ -169,7 +170,7 @@ class PDFPageClassifier:
         The method returns a simplified count used to determine if the page is a drawing page.
 
         Args:
-            page (fitz.Page): The PDF page to analyze.
+            page (pymupdf.Page): The PDF page to analyze.
             top_limit (float): The height limit from the top of the page to ignore vector positions.
 
         Returns:
@@ -185,7 +186,7 @@ class PDFPageClassifier:
             return self.DRAWING_PAGE_VECTOR_IMAGES_COUNT_THRESHOLD
 
         for vector_drawing in vector_drawings:  # type: ignore
-            rect = fitz.Rect(vector_drawing["rect"])
+            rect = pymupdf.Rect(vector_drawing["rect"])
             bottom_y = rect.y1
             width = rect.width
             height = rect.height
@@ -207,7 +208,7 @@ class PDFPageClassifier:
 
         return vector_count
 
-    def _calculate_raster_coverage_percentage(self, page: fitz.Page) -> float:
+    def _calculate_raster_coverage_percentage(self, page: pymupdf.Page) -> float:
         """
         Calculate the percentage of the page area covered by raster images.
 
@@ -215,7 +216,7 @@ class PDFPageClassifier:
         the coverage percentage relative to the entire page area.
 
         Args:
-            page (fitz.Page): The PDF page to analyze.
+            page (pymupdf.Page): The PDF page to analyze.
 
         Returns:
             float: The percentage of the page covered by raster images.
@@ -239,7 +240,7 @@ class PDFPageClassifier:
 
         return (image_area / page_area) * 100 if page_area > 0 else 100.0
 
-    def _calculate_text_blocks_coverage_percentage(self, page: fitz.Page) -> float:
+    def _calculate_text_blocks_coverage_percentage(self, page: pymupdf.Page) -> float:
         """
         Calculate the percentage of the page area covered by text blocks.
 
@@ -247,7 +248,7 @@ class PDFPageClassifier:
         of the total page area.
 
         Args:
-            page (fitz.Page): The PDF page to analyze.
+            page (pymupdf.Page): The PDF page to analyze.
 
         Returns:
             float: The percentage of the page area covered by text blocks.

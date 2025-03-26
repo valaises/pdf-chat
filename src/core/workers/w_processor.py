@@ -8,7 +8,7 @@ from typing import Optional
 from openai import OpenAI
 
 from core.globals import FILES_DIR
-from core.logger import info, warn, error
+from core.logger import info, warn, error, exception
 from core.repositories.repo_files import FilesRepository
 from core.workers.w_abstract import Worker
 from core.workers.w_utils import jsonl_reader
@@ -33,7 +33,7 @@ class Section:
 
 def worker(
         stop_event: threading.Event,
-        stats_repository: FilesRepository
+        files_repository: FilesRepository
 ):
     client = OpenAI()
 
@@ -42,7 +42,7 @@ def worker(
 
     try:
         while not stop_event.is_set():
-            process_files = stats_repository.get_files_by_filter_sync(
+            process_files = files_repository.get_files_by_filter_sync(
                 "processing_status IN (?, ?)",
                 ("extracted", "incomplete")
             )
@@ -66,7 +66,7 @@ def worker(
 
                 if not jsonl_file_path.is_file():
                     file.processing_status = f"Error: jsonl file not found on disk"
-                    stats_repository.update_file_sync(file.file_name, file)
+                    files_repository.update_file_sync(file.file_name, file)
                     continue
 
                 vector_store = next((s for s in openai_vector_stores if s.name == file.file_name), None)
@@ -79,6 +79,10 @@ def worker(
                         error(f"Error while creating vector store for {file.file_name}: {str(e)}")
                         continue
 
+                if file.vector_store_id != vector_store.id:
+                    file.vector_store_id = vector_store.id
+                    files_repository.update_file_sync(file.file_name, file)
+
                 try:
                     vector_store_files = vector_store_files_list(
                         VectorStoreFilesList(vector_store.id), client
@@ -88,44 +92,52 @@ def worker(
                     continue
 
                 for (idx, data_dict) in enumerate(jsonl_reader(jsonl_file_path)):
-                    filename = f"{file.file_name}_{idx}"
+                    base_name = Path(file.file_name).stem
+                    extension = Path(file.file_name).suffix
+                    filename = f"{base_name}_{idx}{extension}"
                     try:
-                        section = Section(
-                            text=data_dict.get('text'),
-                            section_name=data_dict.get('section_name')
-                        )
-                        if section.text is None or section.section_name is None:
-                            warn(f"Skipping section {section.section_name}: section.text or section.name is empty.")
-                            continue
-
-                        file_data = next((f for f in openai_files_list if f.filename == filename), None)
-                        if not file_data:
-                            file2upload = FileUpload(section.text.encode(), filename, "assistants")
-                            file_data = file_upload(file2upload, client)
-                            info(f"Uploaded file: {filename} with file_id: {file_data.id}")
-
-                        vector_store_file = next((f for f in vector_store_files if f.id == file_data.id), None)
-                        if not vector_store_file:
-                            vector_store_file = vector_store_file_create(
-                                VectorStoreFileCreate(
-                                    vector_store.id,
-                                    file_data.id,
-                                    {"section_name": section.section_name},
-                                    chunking_strategy=CHUNKING_STRATEGY
-                                ), client
+                        for k, v in data_dict.items():
+                            section = Section(
+                                section_name=k,
+                                text=v,
                             )
-                            info(f"File {filename} added to vector store {vector_store.id} with id: {vector_store_file.id}")
-                        else:
-                            info(f"File {filename} already exists in vector store {vector_store.id}")
+                            if section.text is None or section.section_name is None:
+                                warn(f"idx: {idx}; Skipping section {section.section_name}: section.text or section.name is empty")
+                                continue
+
+                            file_data = next((f for f in openai_files_list if f.filename == filename), None)
+                            if not file_data:
+                                info(f"Uploading file: {filename}")
+                                file2upload = FileUpload(section.text.encode(), filename, "assistants")
+                                file_data = file_upload(file2upload, client)
+                                info(f"OK -- file uploaded: {filename} with file_id: {file_data.id}")
+                            else:
+                                info(f"File {filename} already exists with file_id: {file_data.id}")
+
+                            vector_store_file = next((f for f in vector_store_files if f.id == file_data.id), None)
+                            if not vector_store_file:
+                                info(f"Adding File {filename} to vector store {vector_store.id}")
+                                vector_store_file = vector_store_file_create(
+                                    VectorStoreFileCreate(
+                                        vector_store.id,
+                                        file_data.id,
+                                        {"section_name": section.section_name},
+                                        chunking_strategy=CHUNKING_STRATEGY
+                                    ), client
+                                )
+                                info(f"OK -- File {filename} added to vector store {vector_store.id} with id: {vector_store_file.id}")
+                            else:
+                                info(f"File {filename} already exists in vector store {vector_store.id}")
 
                     except Exception as e:
-                        error(f"Error uploading file:\n{file}\n{str(e)}")
+                        exception(f"Error uploading file:\n{file}\n{str(e)}")
                         file.processing_status = "incomplete"
-                        stats_repository.update_file_sync(file.file_name, file)
+                        files_repository.update_file_sync(file.file_name, file)
 
                 if file.processing_status != "incomplete":
                     file.processing_status = "complete"
-                    stats_repository.update_file_sync(file.file_name, file)
+                    files_repository.update_file_sync(file.file_name, file)
+                info(f"{file.processing_status}; File {file.file_name}")
 
             stop_event.wait(5)
 

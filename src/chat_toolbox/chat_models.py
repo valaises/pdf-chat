@@ -30,9 +30,34 @@ class ChatTool(BaseModel):
     function: ChatToolFunction
 
 
+class ChatMessageContentItemText(BaseModel):
+    text: str
+    type: str
+
+
+class ChatMessageContentItemImage(BaseModel):
+    image_url: str
+    type: str
+
+
+class ChatMessageContentItemAudio(BaseModel):
+    input_audio: str
+    type: Literal["input_audio"]
+
+
+class ChatMessageContentItemFile(BaseModel):
+    file: str
+    type: Literal["file"]
+
+
 class ChatMessageBase(BaseModel):
     role: Literal["system", "user", "assistant", "tool"]
-    content: Union[str, List[Any]]
+    content: Union[str, Union[
+        ChatMessageContentItemText,
+        ChatMessageContentItemImage,
+        ChatMessageContentItemAudio,
+        ChatMessageContentItemFile
+    ]]
 
 
 class ChatMessageSystem(ChatMessageBase):

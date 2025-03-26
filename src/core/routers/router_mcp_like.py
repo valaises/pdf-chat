@@ -4,12 +4,14 @@ from typing import List
 from fastapi import APIRouter, Response
 from pydantic import BaseModel
 from core.repositories.repo_files import FilesRepository
-from core.tools.tools import get_tools_list, execute_tools, get_system_prompts
+from core.tools.tool_context import ToolContext
+from core.tools.tools import get_tools_list, execute_tools, get_tool_props
 
 from chat_toolbox.chat_models import ChatMessage
 
 
 class ToolsExecutePost(BaseModel):
+    user_id: int
     messages: List[ChatMessage]
 
 
@@ -24,7 +26,7 @@ class MCPLikeRouter(APIRouter):
 
         self.add_api_route("/v1/tools", self._tools, methods=["GET"])
         self.add_api_route("/v1/tools-execute", self._tools, methods=["POST"])
-        self.add_api_route("/v1/system-prompts", self._system_prompts, methods=["GET"])
+        self.add_api_route("/v1/tools-props", self._tool_props, methods=["GET"])
 
     async def _tools(self):
         content = {
@@ -36,7 +38,11 @@ class MCPLikeRouter(APIRouter):
         )
 
     async def _execute_tools(self, post: ToolsExecutePost):
-        tool_res_messages = execute_tools(None, post.messages)
+        tool_context = ToolContext(
+            post.user_id,
+            self._files_repository,
+        )
+        tool_res_messages = await execute_tools(tool_context, post.messages)
         content = {
             "tool_res_messages": [msg.model_dump() for msg in tool_res_messages]
         }
@@ -45,11 +51,14 @@ class MCPLikeRouter(APIRouter):
             media_type="application/json"
         )
 
-    async def _system_prompts(self):
+    async def _tool_props(self):
         # as tools is standardized under OpenAI format, we should not include any additional fields,
-        # => system_prompts moved into its own endpoint
+        # => props moved into its own endpoint
         content = {
-            "system_prompts": get_system_prompts()
+            "props": {
+                tool: props.model_dump()
+                for tool, props in get_tool_props().items()
+            }
         }
         return Response(
             content=json.dumps(content, indent=2),

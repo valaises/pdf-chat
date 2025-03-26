@@ -8,9 +8,10 @@ dependencies = [
     "aiofiles>=24.1.0",
     "aiohttp>=3.11.14",
     "fastapi>=0.115.11",
-    "fitz>=0.0.1.dev2",
+    # Removed fitz dev version and relying on PyMuPDF instead
     "openai>=1.68.2",
     "pymupdf>=1.25.4",
+    "pymupdf-fonts",
     "pymupdf4llm>=0.0.17",
     "termcolor>=2.5.0",
     "ujson>=5.10.0",

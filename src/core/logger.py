@@ -7,9 +7,7 @@ from termcolor import colored
 
 from core.globals import BASE_DIR
 
-
 __all__ = ['init_logger', 'info', 'error', 'warn', 'debug', 'exception']
-
 
 logger = logging.getLogger("CWPP")
 info = logger.info
@@ -22,12 +20,25 @@ FMT = '%(asctime)s %(levelname)s [%(filename)s] %(message)s'
 DATE_FMT = '%Y%m%d %H:%M:%S'
 
 
+# List of filenames to exclude from logging
+EXCLUDED_FILENAMES = [
+    '_base_client.py',
+    '_trace.py',
+    ''
+]
+
+
 def init_logger(debug_on: bool) -> None:
     """Initialize the application logger with console and file handlers.
 
     Args:
         debug_on: Whether to enable debug logging
     """
+
+    class ExcludeFilter(logging.Filter):
+        def filter(self, record: logging.LogRecord) -> bool:
+            # Return False to exclude the record from logging
+            return record.filename not in EXCLUDED_FILENAMES
 
     class ColoredConsoleHandler(logging.Handler):
         def emit(self, record: logging.LogRecord) -> None:
@@ -99,9 +110,16 @@ def init_logger(debug_on: bool) -> None:
         FMT, DATE_FMT
     ))
 
+    console_handler = ColoredConsoleHandler()
+
+    # Add the exclude filter to both handlers
+    exclude_filter = ExcludeFilter()
+    console_handler.addFilter(exclude_filter)
+    file_handler.addFilter(exclude_filter)
+
     logging.basicConfig(
         level=logging.DEBUG if debug_on else logging.INFO,
         format=FMT,
         datefmt=DATE_FMT,
-        handlers=[ColoredConsoleHandler(), file_handler]
+        handlers=[console_handler, file_handler]
     )

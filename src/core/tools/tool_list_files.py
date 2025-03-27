@@ -1,8 +1,8 @@
 import json
 from typing import Dict, Any, List
 
-from chat_toolbox.chat_models import ToolCall, ChatMessage, ChatTool, ChatToolFunction, ChatToolParameters
-from chat_toolbox.tool_usage.tool_abstract import Tool, build_tool_call, ToolProps
+from chat_tools.chat_models import ToolCall, ChatMessage, ChatTool, ChatToolFunction, ChatToolParameters
+from chat_tools.tool_usage.tool_abstract import Tool, build_tool_call, ToolProps
 from core.tools.tool_context import ToolContext
 
 

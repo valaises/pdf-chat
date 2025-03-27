@@ -5,8 +5,8 @@ from typing import Dict, Any, List
 from core.logger import warn, error
 from core.tools.tool_context import ToolContext
 from openai_wrappers.api_vector_store import VectorStoreSearch, vector_store_search
-from chat_toolbox.tool_usage.tool_abstract import Tool, build_tool_call, ToolProps
-from chat_toolbox.chat_models import (
+from chat_tools.tool_usage.tool_abstract import Tool, build_tool_call, ToolProps
+from chat_tools.chat_models import (
     ToolCall, ChatMessage, ChatTool,
     ChatToolFunction, ChatToolParameters,
     ChatToolParameterProperty, ChatMessageContentItemText

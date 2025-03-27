@@ -1,9 +1,9 @@
 import json
-from typing import List, Dict
+from typing import List
 
-from chat_toolbox.chat_models import ChatMessage, ChatMessageTool, ChatTool
-from chat_toolbox.tool_usage.tool_abstract import Tool, build_tool_call, ToolProps
-from chat_toolbox.tool_usage.tool_utils import messages_since_last_user_message, get_unanswered_tool_calls
+from chat_tools.chat_models import ChatMessage, ChatMessageTool, ChatTool
+from chat_tools.tool_usage.tool_abstract import Tool, build_tool_call, ToolProps
+from chat_tools.tool_usage.tool_utils import messages_since_last_user_message, get_unanswered_tool_calls
 from core.tools.tool_context import ToolContext
 from core.tools.tool_list_files import ToolListFiles
 from core.tools.tool_search_in_file import SearchInFile

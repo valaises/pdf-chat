@@ -7,7 +7,7 @@ from core.repositories.repo_files import FilesRepository
 from core.tools.tool_context import ToolContext
 from core.tools.tools import get_tools_list, execute_tools, get_tool_props
 
-from chat_toolbox.chat_models import ChatMessage
+from chat_tools.chat_models import ChatMessage
 
 
 class ToolsExecutePost(BaseModel):

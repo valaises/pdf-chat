@@ -8,7 +8,6 @@ from coxit.extractor.pdf_extractor import PDFExtractor
 from coxit.extractor.section_parser import SectionContentData, SectionParserFromText, SectionParserFromDict
 
 
-
 class FileReader:
     """
     File reader executor class.

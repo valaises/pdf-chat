@@ -38,20 +38,20 @@ def worker(
                     file_content = f.read()
 
                 file_reader = FileReader(file_content, file.file_name_orig)
-                extracted_sections = file_reader.extract_text()
+                extracted_paragraphs = file_reader.extract_paragraphs(visualize=True)
 
-                if not extracted_sections:
-                    file.processing_status = "Error: no text extracted"
+                if not extracted_paragraphs:
+                    file.processing_status = "Error: no paragraphs extracted"
                     stats_repository.update_file_sync(file.file_name, file)
                     continue
 
                 jsonl_file = file_path.with_suffix('.jsonl')
 
                 with jsonl_file.open("w") as f:
-                    for section in extracted_sections:
-                        f.write(json.dumps(section.to_dict()) + "\n")
+                    for par in extracted_paragraphs:
+                        f.write(json.dumps(par.to_dict()) + "\n")
 
-                file.processing_status = "extracted"
+                file.processing_status = "extracted1"
                 stats_repository.update_file_sync(file.file_name, file)
                 info(f"Extracting file {file.file_name_orig} OK")
 

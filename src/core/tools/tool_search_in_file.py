@@ -87,7 +87,7 @@ class SearchInFile(Tool):
             warn(err)
             return False, [
                 build_tool_call(
-                    err,tool_call
+                    err, tool_call
                 )
             ]
 
@@ -107,13 +107,13 @@ class SearchInFile(Tool):
         )
 
         try:
-            resp = await vector_store_search(post)
+            resp = await vector_store_search(ctx.http_session, post)
         except Exception as e:
             err = f"Error while executing tool {self.name}: vector store search failed: {str(e)}"
             error(err)
             return False, [
                 build_tool_call(
-                    err,tool_call
+                    err, tool_call
                 )
             ]
 
@@ -157,6 +157,7 @@ class SearchInFile(Tool):
                             description="The search query to find relevant information.",
                             enum=[]
                         ),
+                        # todo: add filters
                     },
                     required=["document_name", "query"]
                 )

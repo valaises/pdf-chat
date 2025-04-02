@@ -1,6 +1,7 @@
 import json
 from typing import List
 
+import aiohttp
 from fastapi import APIRouter, Response
 from pydantic import BaseModel
 from core.repositories.repo_files import FilesRepository
@@ -18,10 +19,12 @@ class ToolsExecutePost(BaseModel):
 class MCPLikeRouter(APIRouter):
     def __init__(
             self,
+            http_session: aiohttp.ClientSession,
             files_repository: FilesRepository,
             *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
+        self.http_session = http_session
         self._files_repository = files_repository
 
         self.add_api_route("/v1/tools", self._tools, methods=["GET"])
@@ -39,6 +42,7 @@ class MCPLikeRouter(APIRouter):
 
     async def _execute_tools(self, post: ToolsExecutePost):
         tool_context = ToolContext(
+            self.http_session,
             post.user_id,
             self._files_repository,
         )

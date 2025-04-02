@@ -23,6 +23,7 @@ SYSTEM = """TOOL: list_documents
         processing_status variants:
         * "": when document is uploaded, awaiting to get extracted
         * extracted: when document is parsed, awaiting to be processed
+        * processing: processing started
         * incomplete: processed partially
         * complete: complete, indexed, and ready to operate
         * Error: {error_text}: failed to be extracted or complete

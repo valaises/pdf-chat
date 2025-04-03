@@ -1,8 +1,12 @@
 import json
+
 from typing import Dict, Any, List
 
-from chat_tools.chat_models import ToolCall, ChatMessage, ChatTool, ChatToolFunction, ChatToolParameters
-from chat_tools.tool_usage.tool_abstract import Tool, build_tool_call, ToolProps
+from core.tools.tool_utils import build_tool_call
+from openai_wrappers.types import ToolCall, ChatMessage
+from chat_tools.chat_models import ChatTool, ChatToolFunction, ChatToolParameters
+from chat_tools.tool_usage.tool_abstract import Tool, ToolProps
+
 from core.tools.tool_context import ToolContext
 
 
@@ -23,6 +27,7 @@ SYSTEM = """TOOL: list_documents
         processing_status variants:
         * "": when document is uploaded, awaiting to get extracted
         * extracted: when document is parsed, awaiting to be processed
+        * processing: processing started
         * incomplete: processed partially
         * complete: complete, indexed, and ready to operate
         * Error: {error_text}: failed to be extracted or complete

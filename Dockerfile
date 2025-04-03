@@ -16,7 +16,8 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libxslt-dev \
     libxml2-dev \
-    libmupdf-dev
+    libmupdf-dev \
+    git
 
 ENV UV_COMPILE_BYTECODE=1
 

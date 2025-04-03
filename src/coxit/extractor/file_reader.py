@@ -1,70 +1,54 @@
 """
 File reader executor module.
 """
-from typing import Optional
+from typing import List
 
-from core.logger import error, debug
-from coxit.extractor.pdf_extractor import PDFExtractor
-from coxit.extractor.section_parser import SectionContentData, SectionParserFromText, SectionParserFromDict
+import pymupdf
+
+from coxit.extractor.highlight_viz import visualize_paragraphs
+from coxit.extractor.paragraph_parser import ParagraphData, ParagraphParser, SectionPageMapper
 
 
 class FileReader:
     """
     File reader executor class.
     """
+
     def __init__(
-        self,
-        file_data: bytes,
-        file_name: str,
+            self,
+            file_data: bytes,
+            file_name: str,
     ) -> None:
         self._file_data = file_data
-
         self._file_name = file_name
 
-    def extract_text(
-        self,
-        for_llm: bool = True,
-    ) -> Optional[list[SectionContentData]]:
+    def extract_paragraphs(self, visualize: bool = False) -> List[ParagraphData]:
         """
-        Extracts the contents of a pdf file and splits it into sections
-        The extracted content is in Markdown format
+        Extracts paragraphs from a PDF file with section information.
         """
-        parsed_sections = []
+        # Open the PDF document
+        pdf_doc = pymupdf.open(stream=self._file_data, filetype="pdf")
 
-        extractor = PDFExtractor(
-            file_data=self._file_data,
-            file_name=self._file_name
-        )
-        extracted_text_list: list[str] = extractor.extract_content(
-            for_llm=for_llm,
-        )
+        # Pipeline 1: Map sections to pages
+        section_mapper = SectionPageMapper(self._file_data, self._file_name)
+        page_to_section = section_mapper.map_sections_to_pages()
 
-        if len(extracted_text_list) == 0:
-            error("There are no text extracted from PDF.")
-            return None
+        # Pipeline 2: Extract paragraphs
+        paragraph_parser = ParagraphParser(pdf_doc)
+        paragraphs = paragraph_parser.extract_paragraphs()
 
-        sections_dict = extractor.extract_sections_from_colontitles()
-        debug(
-            f"Extracted sections from "
-            f"colontitles: {sections_dict}"
-        )
+        # Join results: Assign section numbers to paragraphs
+        for paragraph in paragraphs:
+            paragraph.section_number = page_to_section.get(paragraph.page_n)
 
-        if len(sections_dict) != 0:
-            parsed_sections = SectionParserFromDict(
-                sections_dict, extracted_text_list
-            ).start_parsing()
-
-        else:
-            extracted_text = "\n".join(
-                extracted_text_list
+        if visualize:
+            output_dir = f"highlighted_paragraphs_{self._file_name}"
+            visualize_paragraphs(
+                file_data=self._file_data,
+                file_name=self._file_name,
+                paragraphs=paragraphs,
+                output_dir=output_dir
             )
+            print(f"Paragraph visualization saved to {output_dir}")
 
-            debug(
-                f"{len(extracted_text)=!r}, "
-            )
-
-            parsed_sections = SectionParserFromText(
-                extracted_text
-            ).start_parsing()
-
-        return parsed_sections
+        return paragraphs

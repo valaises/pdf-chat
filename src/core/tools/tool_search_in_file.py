@@ -4,14 +4,19 @@ from typing import Dict, Any, List
 
 from core.logger import warn, error
 from core.tools.tool_context import ToolContext
+from core.tools.tool_utils import build_tool_call
 from openai_wrappers.api_vector_store import VectorStoreSearch, vector_store_search
-from chat_tools.tool_usage.tool_abstract import Tool, build_tool_call, ToolProps
-from chat_tools.chat_models import (
-    ToolCall, ChatMessage, ChatTool,
+from chat_tools.tool_usage.tool_abstract import Tool, ToolProps
+from openai_wrappers.types import (
+    ToolCall, ChatMessage
+)
+from chat_tools.chat_models import (ChatTool,
     ChatToolFunction, ChatToolParameters,
-    ChatToolParameterProperty, ChatMessageContentItemText
+    ChatToolParameterProperty
 )
 
+
+from openai_wrappers.types import ChatMessageContentItemDocSearch
 
 SYSTEM = """TOOL: search_in_doc
         Use this tool to retrieve relevant information from a document
@@ -87,7 +92,7 @@ class SearchInFile(Tool):
             warn(err)
             return False, [
                 build_tool_call(
-                    err,tool_call
+                    err, tool_call
                 )
             ]
 
@@ -107,22 +112,35 @@ class SearchInFile(Tool):
         )
 
         try:
-            resp = await vector_store_search(post)
+            resp = await vector_store_search(ctx.http_session, post)
         except Exception as e:
             err = f"Error while executing tool {self.name}: vector store search failed: {str(e)}"
             error(err)
             return False, [
                 build_tool_call(
-                    err,tool_call
+                    err, tool_call
                 )
             ]
 
         content = []
         for obj in resp:
+            highlight_box = None
+            try:
+                highlight_box = json.loads(obj.attributes.get("paragraph_box", json.dumps(None)))
+            except Exception:
+                pass
+            page_n = None
+            try:
+                page_n = int(obj.attributes.get("page_n", None))
+            except Exception:
+                pass
+
             for content_i in obj.content:
-                content.append(ChatMessageContentItemText(
+                content.append(ChatMessageContentItemDocSearch(
                     text=content_i.text,
-                    type="text"
+                    type="doc_search",
+                    highlight_box=highlight_box,
+                    page_n=page_n
                 ))
 
         if not content:
@@ -157,6 +175,7 @@ class SearchInFile(Tool):
                             description="The search query to find relevant information.",
                             enum=[]
                         ),
+                        # todo: add filters
                     },
                     required=["document_name", "query"]
                 )

@@ -1,4 +1,3 @@
-import asyncio
 import ujson as json
 import threading
 

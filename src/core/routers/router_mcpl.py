@@ -1,14 +1,16 @@
 import json
+
 from typing import List
 
 import aiohttp
+
 from fastapi import APIRouter, Response
 from pydantic import BaseModel
+
 from core.repositories.repo_files import FilesRepository
 from core.tools.tool_context import ToolContext
 from core.tools.tools import get_tools_list, execute_tools, get_tool_props
-
-from chat_tools.chat_models import ChatMessage
+from openai_wrappers.types import ChatMessage
 
 
 class ToolsExecutePost(BaseModel):
@@ -16,7 +18,7 @@ class ToolsExecutePost(BaseModel):
     messages: List[ChatMessage]
 
 
-class MCPLikeRouter(APIRouter):
+class MCPLRouter(APIRouter):
     def __init__(
             self,
             http_session: aiohttp.ClientSession,

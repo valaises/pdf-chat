@@ -1,4 +1,5 @@
 import aiohttp
+
 from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
@@ -6,7 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 from core.repositories.repo_files import FilesRepository
 from core.routers.router_base import BaseRouter
 from core.routers.router_files import FilesRouter
-from core.routers.router_mcp_like import MCPLikeRouter
+from core.routers.router_mcpl import MCPLRouter
 
 
 __all__ = ["App"]
@@ -50,7 +51,7 @@ class App(FastAPI):
     def _routers(self):
         return [
             BaseRouter(),
-            MCPLikeRouter(
+            MCPLRouter(
                 self.http_session,
                 self.files_repository,
             ),

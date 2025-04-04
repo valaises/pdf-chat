@@ -149,6 +149,7 @@ Files progress through these statuses:
 ## Getting Started
 
 ### Prerequisites
+* Git
 * Docker runtime support
 * OPENAI_API_KEY
 
@@ -156,7 +157,7 @@ Files progress through these statuses:
 
 1. Clone the repository
 ```bash
-git clone [repository-url]
+git clone git@github.com:COXIT-CO/chat-with-pdf-poc.git
 cd chat-with-pdf-poc
 ```
 
@@ -168,3 +169,8 @@ cp .env.example .env
 ```bash
 docker-compose up --build -d
 ```
+
+## Integration
+To integrate MCPL Server into an Application, use following architecture:
+
+![integrate-mcpl-server.jpg](Drawings/integrate-mcpl-server.png)

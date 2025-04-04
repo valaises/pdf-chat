@@ -8,15 +8,14 @@ from core.tools.tool_utils import build_tool_call
 from openai_wrappers.api_vector_store import VectorStoreSearch, vector_store_search
 from chat_tools.tool_usage.tool_abstract import Tool, ToolProps
 from openai_wrappers.types import (
-    ToolCall, ChatMessage
+    ToolCall, ChatMessage,
+    ChatMessageContentItemDocSearch
 )
 from chat_tools.chat_models import (ChatTool,
     ChatToolFunction, ChatToolParameters,
     ChatToolParameterProperty
 )
 
-
-from openai_wrappers.types import ChatMessageContentItemDocSearch
 
 SYSTEM = """TOOL: search_in_doc
         Use this tool to retrieve relevant information from a document
@@ -41,7 +40,24 @@ SYSTEM = """TOOL: search_in_doc
 """
 
 
-class SearchInFile(Tool):
+class ToolSearchInFile(Tool):
+    """
+    A tool for searching within documents using vector search.
+
+    This tool allows users to search for relevant information within a specified document
+    by performing vector search on document chunks. It retrieves the most relevant
+    sections of the document based on the provided query.
+
+    The tool requires a document name and search query, and optionally accepts filters
+    to refine search results.
+
+    Before using this tool, the document must exist and be indexed in the vector store.
+    The list_documents tool should be called first to verify document availability.
+
+    Returns:
+        A list of relevant document sections with metadata such as page numbers,
+        section names, and highlight boxes when available.
+    """
     @property
     def name(self) -> str:
         return "search_in_doc"
@@ -134,13 +150,15 @@ class SearchInFile(Tool):
                 page_n = int(obj.attributes.get("page_n", None))
             except Exception:
                 pass
+            section_name = obj.attributes.get("section_number")
 
             for content_i in obj.content:
                 content.append(ChatMessageContentItemDocSearch(
                     text=content_i.text,
                     type="doc_search",
                     highlight_box=highlight_box,
-                    page_n=page_n
+                    page_n=page_n,
+                    section_name=section_name,
                 ))
 
         if not content:

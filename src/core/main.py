@@ -29,7 +29,17 @@ def main():
         files_repository,
         docs_url=None,
         redoc_url=None,
-        openapi_url="/api/v1/openapi.json"
+        openapi_url="/v1/openapi.json",
+        openapi_tags=[
+            {
+                "name": "Files",
+                "description": "Operations related to file management, including uploading, listing, and deleting files."
+            },
+            {
+                "name": "MCPL",
+                "description": "Model Context Protocol Like operations and tools."
+            },
+        ]
     )
 
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())

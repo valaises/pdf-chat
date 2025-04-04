@@ -35,6 +35,27 @@ SYSTEM = """TOOL: list_documents
 
 
 class ToolListFiles(Tool):
+    """
+    A tool for listing available documents that can be used for context.
+
+    This tool retrieves all files associated with the current user and returns
+    information about each file, including its name, processing status, and
+    available filters. It's useful for checking which documents are available
+    for reference and their current processing state.
+
+    The tool should be called when:
+    - The user wants to chat about a document (to verify it exists)
+    - There's a need to check the processing status of a document
+    - A document's processing status needs to be re-checked if it was previously incomplete
+
+    Processing status can be one of:
+    - "": Document is uploaded, awaiting extraction
+    - "extracted": Document is parsed, awaiting processing
+    - "processing": Processing has started
+    - "incomplete": Document is partially processed
+    - "complete": Document is fully processed, indexed, and ready to use
+    - "Error: {error_text}": Document failed to be extracted or processed
+    """
     @property
     def name(self) -> str:
         return "list_documents"

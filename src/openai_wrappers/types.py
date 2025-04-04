@@ -11,6 +11,7 @@ class ChatMessageContentItemDocSearch(BaseModel):
     type: str
     highlight_box: Optional[List[float]] = None
     page_n: Optional[int] = None
+    section_name: Optional[str] = None
 
 
 class ChatMessageContentItemText(BaseModel):

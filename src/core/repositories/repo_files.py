@@ -2,21 +2,60 @@ import sqlite3
 from datetime import datetime
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from core.repositories.repo_abstract import AbstractRepository
 
 
 class FileItem(BaseModel):
-    file_name: str
-    file_name_orig: str
-    user_id: int
-    created_at: datetime
-    processing_status: str = ""
-    vector_store_id: str = ""
+    file_name: str = Field( # type: ignore
+        ...,
+        description="Hashed filename stored in the system",
+        example="a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6.pdf"
+    )
+    file_name_orig: str = Field( # type: ignore
+        ...,
+        description="Original filename provided by the user",
+        example="important_document.pdf"
+    )
+    user_id: int = Field( # type: ignore
+        ...,
+        description="ID of the user who owns the file",
+        example=12345
+    )
+    created_at: datetime = Field( # type: ignore
+        default_factory=datetime.now,
+        description="Timestamp when the file was created",
+        example="2023-09-15T14:30:00"
+    )
+    processing_status: str = Field( # type: ignore
+        default="",
+        description="Current status of file processing (empty, 'processing', 'completed', 'error')",
+        example="completed"
+    )
+    vector_store_id: str = Field( # type: ignore
+        default="",
+        description="ID of the associated vector store for search/retrieval",
+        example="vs_123456789"
+    )
 
 
 class FilesRepository(AbstractRepository):
+    """
+    Repository for managing user files in a SQLite database.
+
+    This repository provides methods to create, retrieve, update, and delete file records.
+    It supports both synchronous and asynchronous operations, with async methods delegating
+    to their sync counterparts through the AbstractRepository's thread pool.
+
+    The repository stores file metadata including:
+    - file_name: Unique identifier for the file (primary key)
+    - file_name_orig: Original name of the file
+    - user_id: ID of the user who owns the file
+    - created_at: Timestamp when the file was created
+    - processing_status: Current status of file processing
+    - vector_store_id: ID of the associated vector store (for search/retrieval)
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._init_db()

@@ -7,6 +7,16 @@ from pathlib import Path
 
 
 class AbstractRepository:
+    """
+    Abstract base class for database repositories.
+
+    This class provides common functionality for database operations,
+    including connection management and asynchronous execution of
+    blocking database operations.
+
+    Attributes:
+        db_path (Path): Path to the SQLite database file.
+    """
     def __init__(self, db_path: Path):
         self.db_path = db_path
 

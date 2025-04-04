@@ -10,6 +10,6 @@ class BaseRouter(APIRouter):
 
     async def _scalar(self):
         return get_scalar_api_reference(
-            openapi_url="/api/v1/openapi.json",
-            title="Sensible API Ref",
+            openapi_url="/v1/openapi.json",
+            title="Doc RAG Api Ref",
         )

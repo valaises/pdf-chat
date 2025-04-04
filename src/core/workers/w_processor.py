@@ -55,6 +55,26 @@ def worker(
         stop_event: threading.Event,
         files_repository: FilesRepository
 ) -> None:
+    """
+    Main worker function that processes files in a continuous loop until stopped.
+
+    This worker handles the entire file processing pipeline:
+    1. Initializes OpenAI client and event loop
+    2. Resets any files stuck in "processing" status to "incomplete"
+    3. Continuously polls for files that need processing
+    4. Retrieves necessary OpenAI resources (files list and vector stores)
+    5. Processes each file through the complete pipeline
+
+    The worker will pause between iterations and can be gracefully stopped
+    using the provided stop_event.
+
+    Args:
+        stop_event: Threading event used to signal the worker to stop
+        files_repository: Repository for accessing and updating file data
+
+    Returns:
+        None
+    """
     client = OpenAI()
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

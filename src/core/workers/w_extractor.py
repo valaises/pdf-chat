@@ -17,6 +17,29 @@ def worker(
         stop_event: threading.Event,
         stats_repository: FilesRepository
 ):
+    """
+    Worker function that continuously processes files for text extraction.
+
+    This worker monitors the repository for files with empty processing_status,
+    extracts paragraphs from these files using FileReader, and saves the results
+    as JSONL files. The processing status of each file is updated accordingly.
+
+    The worker runs in a loop until the stop_event is set, with pauses between
+    iterations to prevent excessive CPU usage.
+
+    Args:
+        stop_event (threading.Event): Event to signal the worker to stop processing
+        stats_repository (FilesRepository): Repository for accessing and updating file metadata
+
+    Flow:
+        1. Get files with empty processing_status
+        2. For each file:
+           - Read file content
+           - Extract paragraphs using FileReader
+           - Save extracted paragraphs as JSONL
+           - Update file processing status to "extracted"
+        3. Wait before next iteration
+    """
     while not stop_event.is_set():
         process_files = stats_repository.get_files_by_filter_sync("processing_status = ?", ("",))
         if not process_files:

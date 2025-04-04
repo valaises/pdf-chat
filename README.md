@@ -1,11 +1,15 @@
-# Chat with PDF - Document Search Tools
+#  Document Search Tools Server
 
 A standalone server that allows users to upload PDF documents and after documents are parsed and processed, users are able to call `/v1/tools-execute`, passing a conversation with pending tool calls. Server answers tool calls, producing new Messages with Results: RAG Messages, Helper Messages, or Text Messages.
 
 
 Please, visit http://HOSTNAME/docs to access the API documentation
+All models that endpoints accept or output, are also available.
+Documentation is always up-to-date as it's generated on APP's startup.
 
-Alternatively, RAW OpenAPI documentation can be accessed at http://HOSTNAME/v1/openapi.json
+Hint: in documentation "tick" show Response Schema. If it's too long to read: copy-paste to LLM and ask it to create structures in your language/library
+
+Alternatively, RAW OpenAPI documentation can be accessed at http://HOSTNAME/v1/openapi.json -- Useful for alternative API Clients: Yaak, Postman, etc.
 ## Overview
 
 This application provides a complete pipeline for:
@@ -13,6 +17,15 @@ This application provides a complete pipeline for:
 2. Extracting text content from PDFs
 3. Processing the extracted content, uploading to OpenAI's File and Vector Store APIs.
 4. Providing an API interface to List and Execute Tools
+
+## Roadmap TBD
+- [ ] Sentence / Smaller parts then paragraphs Highlights (without coords) (~Easy-Moderate)
+- [ ] RAG re-ranking (with OR without summarizations) (~Moderate)
+- [ ] Documents' summarization pipeline (~Moderate)
+- [ ] Other Document Storing Options -- e.g. S3 API (~Moderate)
+- [ ] Better PDF object detection using CV Model (~Difficult, Research needed)
+- [ ] Non-text PDFs support using CV model for OD, then extraction of text using OCR (~Moderate, after CV Model implemented)
+- [ ] Questions about Drawings (~Difficult-Very Difficult, after CV Model implemented)
 
 ## Project Structure
 
@@ -89,7 +102,7 @@ The application follows a modular architecture with these key components:
 - **File System Storage**:
   - Uploaded PDFs stored with hashed filenames
   - Extracted text stored in JSONL format
-  - Visualization of extracted paragraphs (optional)
+  - Visualization of highlights of extracted paragraphs (optional, hardcoded in `w_extractor.py`)
   
 - **OpenAI Vector Stores**: 
   - Semantic search capabilities using OpenAI's embeddings
@@ -121,7 +134,7 @@ The application follows a modular architecture with these key components:
 4. **Query Phase**:
    - User calls tools-execute with given messages in OpenAI format
    - IF messages (after latest user message) contain unanswered tool calls, tools are executed: list_documents or search_in_doc
-   - After tools are validated, then executed, returning tool answer messages in output
+   - After tools are validated, and then executed, returning tool answer messages in output
 
 ### Status Tracking
 
@@ -134,6 +147,10 @@ Files progress through these statuses:
 - `"error: [message]"`: An error occurred during processing
 
 ## Getting Started
+
+### Prerequisites
+* Docker runtime support
+* OPENAI_API_KEY
 
 ### Installation
 

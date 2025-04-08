@@ -1,5 +1,6 @@
 import time
 import threading
+import re
 
 from pathlib import Path
 from typing import Iterator
@@ -17,6 +18,7 @@ from core.workers.w_abstract import Worker
 __all__ = ["spawn_worker"]
 
 FILE_RULE = "*.[pP][dD][fF]"
+PDF_PATTERN = re.compile(r'.*\.pdf$', re.IGNORECASE)
 
 
 def add_file_to_db_if_ok(file_path: Path, files_repository: FilesRepository) -> None:
@@ -60,7 +62,7 @@ def add_file_to_db_if_ok(file_path: Path, files_repository: FilesRepository) -> 
 
 def scan_existing_files(directory: Path) -> Iterator[Path]:
     for file_path in directory.glob(FILE_RULE): # non-recursive
-        if file_path.is_file():
+        if file_path.is_file() and PDF_PATTERN.match(file_path.name):
             yield file_path
 
 
@@ -71,14 +73,15 @@ class EventHandler(FileSystemEventHandler):
 
     def on_created(self, event: FileSystemEvent) -> None:
         path = Path(event.src_path)
-        if path.match(FILE_RULE):
+        if PDF_PATTERN.match(path.name):
             # todo: potential problem: when adding a file in progress, watchdog may loose incoming files
+            time.sleep(0.5)
             add_file_to_db_if_ok(path, self.files_repository)
 
     def on_deleted(self, event: FileSystemEvent) -> None:
         """Handle file deletion events by removing the corresponding record from the database."""
         path = Path(event.src_path)
-        if path.match(FILE_RULE):
+        if PDF_PATTERN.match(path.name):
             file_name = path.name
             if self.files_repository.delete_file_sync(file_name):
                 info(f"Removed file {file_name} from database after deletion from disk")

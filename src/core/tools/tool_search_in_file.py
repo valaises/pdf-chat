@@ -5,6 +5,7 @@ from typing import Dict, Any, List
 from core.logger import warn, error
 from core.tools.tool_context import ToolContext
 from core.tools.tool_utils import build_tool_call
+from core.workers.w_utils import generate_paragraph_id
 from openai_wrappers.api_vector_store import VectorStoreSearch, vector_store_search
 from chat_tools.tool_usage.tool_abstract import Tool, ToolProps
 from openai_wrappers.types import (
@@ -36,7 +37,13 @@ SYSTEM = """TOOL: search_in_doc
           filters should only be used when user directly asks to use them.
           
         search_in_doc produces:
-        * pieces of text containing relevant information that will help you to answer user's question
+        * pieces of text containing relevant information that will help you to answer user's question in a format:
+          {"text": "text", "id": "pid-12345678"}
+          
+        When using text for composing answer, obligatory refer to id after piece of generated answer.
+        Example:
+          Sky is blue because of a phenomenon called Rayleigh scattering. [pid-12345678] Answer continues...
+          Would you like me to help yo with anything else?
 """
 
 
@@ -150,10 +157,14 @@ class ToolSearchInFile(Tool):
                 page_n = int(obj.attributes.get("page_n", None))
             except Exception:
                 pass
+
             section_name = obj.attributes.get("section_number")
 
             for content_i in obj.content:
+                paragraph_id = obj.attributes.get("paragraph_id", generate_paragraph_id(content_i.text))
+
                 content.append(ChatMessageContentItemDocSearch(
+                    paragraph_id=paragraph_id,
                     text=content_i.text,
                     type="doc_search",
                     highlight_box=highlight_box,

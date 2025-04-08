@@ -7,6 +7,7 @@ type ChatMessage = Union[ChatMessageSystem, ChatMessageUser, ChatMessageAssistan
 
 
 class ChatMessageContentItemDocSearch(BaseModel):
+    paragraph_id: str
     text: str
     type: str
     highlight_box: Optional[List[float]] = None

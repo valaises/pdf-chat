@@ -9,6 +9,7 @@ dependencies = [
     "aiohttp>=3.11.14",
     "chat-tools",
     "fastapi>=0.115.11",
+    "more-itertools>=10.6.0",
     "openai>=1.68.2",
     "pymupdf>=1.25.4",
     "pymupdf-fonts",

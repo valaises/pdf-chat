@@ -2,7 +2,6 @@ import asyncio
 
 import uvloop
 
-from core.args import parse_args
 from core.globals import BASE_DIR, FILES_DIR
 from core.logger import init_logger, info
 from core.app import App
@@ -15,8 +14,7 @@ from core.workers.w_watchdog import spawn_worker as spawn_worker_watchdog
 
 
 def main():
-    args = parse_args()
-    init_logger(args.DEBUG)
+    init_logger(True)
     info("Logger initialized")
 
     db_dir = BASE_DIR / "db"
@@ -49,8 +47,8 @@ def main():
 
     server = Server(
         app=app,
-        host=args.host,
-        port=args.port,
+        host="0.0.0.0",
+        port=8011, # todo: use env values
         workers=[
             watchdog_worker,
             doc_e_worker,

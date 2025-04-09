@@ -13,7 +13,7 @@ from core.globals import FILES_DIR
 from core.logger import info, error, exception
 from core.repositories.repo_files import FilesRepository
 from core.workers.w_abstract import Worker
-from core.workers.w_utils import jsonl_reader
+from core.workers.w_utils import jsonl_reader, generate_content_hash, generate_paragraph_id
 from openai_wrappers.api_files import files_list, FileUpload, file_upload, file_delete
 from openai_wrappers.api_vector_store import (
     vector_stores_list, VectorStoreCreate, vector_store_create,
@@ -46,8 +46,7 @@ def generate_hashed_filename(
     Returns:
         A unique filename with format {base_name}_{hash}{extension}
     """
-    # noinspection PyTypeChecker
-    content_hash = hashlib.md5((base_name + content).encode()).hexdigest()[:16]
+    content_hash = generate_content_hash(content, base_name)
     return f"{base_name}_{content_hash}{extension}"
 
 
@@ -386,10 +385,14 @@ def add_to_vector_store_if_needed(
     if not vector_store_file:
         info(f"Adding File {filename} to vector store {vector_store.id}")
 
+        paragraph_id = generate_paragraph_id(para.paragraph_text)
+
         attributes = {
             "page_n": para.page_n,
+            "paragraph_id": paragraph_id,
             "paragraph_box": json.dumps(list(para.paragraph_box)),
         }
+
         if para.section_number:
             attributes["section_number"] = para.section_number
 

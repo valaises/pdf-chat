@@ -1,8 +1,9 @@
 import json
+import time
 
 from typing import Dict, Any, List
 
-from core.logger import warn, error
+from core.logger import warn, error, info
 from core.tools.tool_context import ToolContext
 from core.tools.tool_utils import build_tool_call
 from core.workers.w_utils import generate_paragraph_id
@@ -135,7 +136,9 @@ class ToolSearchInFile(Tool):
         )
 
         try:
+            start_time = time.time()
             resp = await vector_store_search(ctx.http_session, post)
+            info(f"Vector store search for '{query}' took {time.time() - start_time:.3f} seconds")
         except Exception as e:
             err = f"Error while executing tool {self.name}: vector store search failed: {str(e)}"
             error(err)

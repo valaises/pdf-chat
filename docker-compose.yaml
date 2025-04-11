@@ -11,4 +11,5 @@ services:
       - ./db:/app/db
       - ./logs:/app/logs
       - ./files:/app/files
+      - ./telemetry:/app/telemetry
     restart: unless-stopped

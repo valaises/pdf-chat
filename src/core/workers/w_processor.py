@@ -1,17 +1,21 @@
 import json
 import asyncio
 import threading
+import time
 
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple, List, Dict, Any, Set
+from typing import Optional, Tuple, List, Dict, Any
+
+import numpy as np
 
 from pydantic import BaseModel
 from openai import OpenAI
-from more_itertools import chunked
 
 from core.globals import FILES_DIR
-from core.logger import info, error, exception
+from core.logger import info, error, exception, warn
 from core.repositories.repo_files import FilesRepository, FileItem
+from core.telemetry import TeleWriter, TelemetryScope, TeleWProcessor, TeleItemStatus
 from core.workers.w_abstract import Worker
 from core.workers.w_utils import jsonl_reader, generate_paragraph_id, \
     generate_vector_store_file_name, generate_hashed_filename
@@ -28,6 +32,14 @@ class ParagraphData(BaseModel):
     section_number: Optional[str] = None
     paragraph_text: str
     paragraph_box: Tuple[float, float, float, float]
+
+
+@dataclass
+class WorkerContext:
+    client: OpenAI
+    loop: asyncio.AbstractEventLoop
+    tele: TeleWriter
+    files_repository: FilesRepository
 
 
 def worker(
@@ -57,6 +69,14 @@ def worker(
     client = OpenAI()
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    tele = TeleWriter(TelemetryScope.W_PROCESSOR)
+
+    ctx = WorkerContext(
+        client=client,
+        loop=loop,
+        tele=tele,
+        files_repository=files_repository
+    )
 
     processing_files = files_repository.get_files_by_filter_sync(
         "processing_status IN (?)",
@@ -69,19 +89,38 @@ def worker(
     try:
         while not stop_event.is_set():
             process_files = get_files_to_process(files_repository)
+
             if not process_files:
                 stop_event.wait(3)
                 continue
 
-            openai_resources = get_openai_resources(client)
-            if not openai_resources:
+            t0 = time.time()
+            try:
+                openai_files_list, openai_vector_stores = get_openai_resources(client)
+            except Exception as e:
+                error(f"Error retrieving OpenAI files_list or vector_stores_list: {str(e)}")
+                TeleWProcessor(
+                    event="get_openai_resources",
+                    status=TeleItemStatus.FAILURE,
+                    error_message=str(e),
+                    error_recoverable=True,
+                    duration_seconds=time.time() - t0,
+                ).write(ctx.tele)
                 continue
-
-            openai_files_list, openai_vector_stores = openai_resources
+            else:
+                TeleWProcessor(
+                    event="get_openai_resources",
+                    status=TeleItemStatus.SUCCESS,
+                    duration_seconds = time.time() - t0,
+                ).write(ctx.tele)
 
             for file in process_files:
-                # todo: execute in parallel when needed
-                process_single_file(loop, client, file, files_repository, openai_files_list, openai_vector_stores)
+                process_single_file(
+                    ctx,
+                    file,
+                    openai_files_list,
+                    openai_vector_stores
+                )
 
             stop_event.wait(1)
     finally:
@@ -96,22 +135,16 @@ def get_files_to_process(files_repository: FilesRepository) -> List[FileItem]:
     )
 
 
-def get_openai_resources(client: OpenAI) -> Optional[Tuple[List[Any], List[Any]]]:
+def get_openai_resources(client: OpenAI) -> Tuple[List[Any], List[Any]]:
     """Retrieve necessary OpenAI resources for processing."""
-    try:
-        openai_files_list = files_list(client)
-        openai_vector_stores = vector_stores_list(client)
-        return openai_files_list, openai_vector_stores
-    except Exception as e:
-        error(f"Error retrieving OpenAI files_list or vector_stores_list: {str(e)}")
-        return None
+    openai_files_list = files_list(client)
+    openai_vector_stores = vector_stores_list(client)
+    return openai_files_list, openai_vector_stores
 
 
 def process_single_file(
-        loop: asyncio.AbstractEventLoop,
-        client: OpenAI,
+        ctx: WorkerContext,
         file: FileItem,
-        files_repository: FilesRepository,
         openai_files_list: List[Any],
         openai_vector_stores: List[Any]
 ) -> None:
@@ -119,41 +152,118 @@ def process_single_file(
     info(f"Processing file: {file.file_name_orig} STATUS={file.processing_status}")
     file.processing_status = "processing"
 
+    ts_process_single_file = time.time()
+
     jsonl_file_path = get_jsonl_file_path(file)
     if not jsonl_file_path or not jsonl_file_path.is_file():
-        mark_file_as_error(file, files_repository, "Error: jsonl file not found on disk")
+        error_message = "Error: jsonl file not found on disk"
+        error(error_message)
+        mark_file_as_error(file, ctx.files_repository, error_message)
+        TeleWProcessor(
+            event="get_jsonl_file_path",
+            status=TeleItemStatus.FAILURE,
+            error_message=error_message,
+            error_recoverable=False,
+            user_id=file.user_id,
+            file_name=file.file_name,
+            file_name_orig=file.file_name_orig,
+        ).write(ctx.tele)
         return
 
-    vector_store = ensure_vector_store_exists(client, file, files_repository, openai_vector_stores)
-    if not vector_store:
+    t0 = time.time()
+    try:
+        vector_store = ensure_vector_store_exists(ctx, file, ctx.files_repository, openai_vector_stores)
+    except Exception as e:
+        error_message = f"Error while creating vector store for {file.file_name}: {str(e)}"
+        mark_file_as_error(file, ctx.files_repository, error_message)
+        error(error_message)
+        TeleWProcessor(
+            event="ensure_vector_store_exists",
+            status=TeleItemStatus.FAILURE,
+            error_message=error_message,
+            error_recoverable=False,
+            user_id=file.user_id,
+            file_name=file.file_name,
+            file_name_orig=file.file_name_orig,
+            duration_seconds=time.time() - t0
+        ).write(ctx.tele)
         return
 
-    vector_store_files = get_vector_store_files(client, vector_store)
-    if vector_store_files is None:
+    t0 = time.time()
+    try:
+        vector_store_files = get_vector_store_files(ctx, vector_store)
+    except Exception as e:
+        error_message = f"Error retrieving vector store files for {vector_store.name}: {str(e)}"
+        mark_file_as_error(file, ctx.files_repository, error_message)
+        error(error_message)
+        TeleWProcessor(
+            error_message=error_message,
+            error_recoverable=False,
+            event="get_vector_store_files",
+            status=TeleItemStatus.FAILURE,
+            user_id=file.user_id,
+            file_name=file.file_name,
+            file_name_orig=file.file_name_orig,
+            vector_store=vector_store.name,
+            duration_seconds=time.time() - t0
+        ).write(ctx.tele)
         return
-
-    # Generate expected filenames from disk content
-    expected_filenames = generate_expected_filenames(
-        jsonl_file_path,
-        Path(file.file_name_orig).stem,
-        Path(file.file_name).suffix
-    )
 
     # Process paragraphs
-    process_file_paragraphs(
-        loop,
-        client,
-        file,
-        jsonl_file_path,
-        openai_files_list,
-        vector_store,
-        vector_store_files,
-        files_repository
-    )
+    t0 = time.time()
+    try:
+        # Use ctx.loop to run the coroutine
+        ctx.loop.run_until_complete(process_file_paragraphs(
+            ctx,
+            file,
+            jsonl_file_path,
+            openai_files_list,
+            vector_store,
+            vector_store_files
+        ))
+    except Exception as e:
+        error_message = f"Error processing paragraphs:\n{file}\n{str(e)}"
+        exception(error_message)
+        file.processing_status = "incomplete"
+        ctx.files_repository.update_file_sync(file.file_name, file)
+        TeleWProcessor(
+            error_message=error_message,
+            error_recoverable=True,
+            event="process_file_paragraphs",
+            status=TeleItemStatus.FAILURE,
+            user_id=file.user_id,
+            file_name=file.file_name,
+            file_name_orig=file.file_name_orig,
+            vector_store=vector_store.name,
+            duration_seconds=time.time() - t0
+        ).write(ctx.tele)
+    else:
+        TeleWProcessor(
+            event="process_file_paragraphs",
+            status=TeleItemStatus.SUCCESS,
+            user_id=file.user_id,
+            file_name=file.file_name,
+            file_name_orig=file.file_name_orig,
+            vector_store=vector_store.name,
+            duration_seconds=time.time() - t0
+        ).write(ctx.tele)
 
     if file.processing_status != "incomplete":
         file.processing_status = "complete"
-        files_repository.update_file_sync(file.file_name, file)
+        ctx.files_repository.update_file_sync(file.file_name, file)
+
+    TeleWProcessor(
+        event="process_file_done",
+        status=TeleItemStatus.INFO,
+        user_id=file.user_id,
+        file_name=file.file_name,
+        file_name_orig=file.file_name_orig,
+        vector_store=vector_store.name,
+        attributes={
+            "processing_status": file.processing_status
+        },
+        duration_seconds=time.time() - ts_process_single_file
+    ).write(ctx.tele)
 
     info(f"{file.processing_status}; File {file.file_name}")
 
@@ -171,11 +281,11 @@ def mark_file_as_error(file: FileItem, files_repository: FilesRepository, error_
 
 
 def ensure_vector_store_exists(
-        client: OpenAI,
+        ctx: WorkerContext,
         file: FileItem,
         files_repository: FilesRepository,
         openai_vector_stores: List[Any]
-) -> Optional[Any]:
+) -> Any:
     """Ensure a vector store exists for the file, creating one if needed."""
     vs_file_name = generate_vector_store_file_name(file)
     vector_store = next((s for s in openai_vector_stores if s.name == vs_file_name), None)
@@ -183,12 +293,8 @@ def ensure_vector_store_exists(
         payload = VectorStoreCreate(
             name=vs_file_name
         )
-        try:
-            vector_store = vector_store_create(client, payload)
-            info(f"Vector store created for {file.file_name}")
-        except Exception as e:
-            error(f"Error while creating vector store for {file.file_name}: {str(e)}")
-            return None
+        vector_store = vector_store_create(ctx.client, payload)
+        info(f"Vector store created for {file.file_name}")
 
     if file.vector_store_id != vector_store.id:
         file.vector_store_id = vector_store.id
@@ -197,150 +303,284 @@ def ensure_vector_store_exists(
     return vector_store
 
 
-def get_vector_store_files(client: OpenAI, vector_store: Any) -> Optional[List[Any]]:
+def get_vector_store_files(ctx: WorkerContext, vector_store: Any) -> List[Any]:
     """Get the files associated with a vector store."""
-    try:
-        return vector_store_files_list(
-            client,
-            VectorStoreFilesList(
-                vector_store_id=vector_store.id
-            )
+    return vector_store_files_list(
+        ctx.client,
+        VectorStoreFilesList(
+            vector_store_id=vector_store.id
         )
-    except Exception as e:
-        error(f"Error retrieving vector store files for {vector_store.name}: {str(e)}")
-        return None
+    )
 
 
-def generate_expected_filenames(
-        jsonl_file_path: Path,
-        base_name: str,
-        extension: str
-) -> Set[str]:
-    """Generate the set of expected filenames based on disk content."""
-    expected_filenames = set()
-
-    for data_dict in jsonl_reader(jsonl_file_path):
-        try:
-            para = ParagraphData(**data_dict)
-            filename = generate_hashed_filename(base_name, para.paragraph_text, extension)
-            expected_filenames.add(filename)
-        except Exception as e:
-            error(f"Error generating expected filename: {str(e)}")
-
-    return expected_filenames
-
-
-def process_file_paragraphs(
-        loop: asyncio.AbstractEventLoop,
-        client: OpenAI,
-        file: Any,
+async def process_file_paragraphs(
+        ctx: WorkerContext,
+        file: FileItem,
         jsonl_file_path: Path,
         openai_files_list: List[Any],
         vector_store: Any,
         vector_store_files: List[Any],
-        files_repository: FilesRepository
 ) -> None:
-    """Process all paragraphs in a file in batches of 10 concurrently."""
-
+    """Process all paragraphs in a file with controlled concurrency."""
     base_name = Path(file.file_name_orig).stem
     extension = Path(file.file_name).suffix
 
-    try:
+    t0 = ctx.loop.time()
+    # Create a semaphore to limit concurrent tasks
+    semaphore = asyncio.Semaphore(10)  # Process up to 10 paragraphs concurrently
 
-        # Process in batches of 10
-        for batch in chunked(jsonl_reader(jsonl_file_path), 10):
+    async def process_with_semaphore(data_dict):
+        async with semaphore:
+            return await process_paragraph(
+                ctx,
+                file,
+                data_dict,
+                base_name,
+                extension,
+                openai_files_list,
+                vector_store,
+                vector_store_files
+            )
 
-            # Create tasks for concurrent execution
-            tasks = []
-            for data_dict in batch:
-                tasks.append(process_paragraph(
-                    client,
-                    data_dict,
-                    base_name,
-                    extension,
-                    openai_files_list,
-                    vector_store,
-                    vector_store_files
-                ))
+    # Create tasks for all paragraphs
+    tasks = []
+    for data_dict in jsonl_reader(jsonl_file_path):
+        tasks.append(process_with_semaphore(data_dict))
 
-            # Execute batch concurrently
-            loop.run_until_complete(asyncio.gather(*tasks))
+    # Process all paragraphs with controlled concurrency
+    results = await asyncio.gather(*tasks)
+    results = [r for r in results if r is not None]
 
-    except Exception as e:
-        exception(f"Error processing paragraphs:\n{file}\n{str(e)}")
-        file.processing_status = "incomplete"
-        files_repository.update_file_sync(file.file_name, file)
+    # Calculate statistics
+    # if 0 -> cached value was used
+    # if None -> failed making a request
+    add_file_times = [r[0] for r in results if r[0]]
+    add_file_to_vs_times = [r[1] for r in results if r[1]]
+
+    stats = {
+        "add_file": {
+            "items_from_cache": sum(1 for r in results if r[0] is None),
+            "total_items": len(results),
+            "min_time": None,
+            "max_time": None,
+            "avg_time": None,
+            "med_time": None,
+            # Total processing time: Track the overall time taken for the entire batch of paragraphs
+            "total_time": sum(add_file_times) if add_file_times else 0,
+            # Success rate: Percentage of paragraphs successfully processed
+            "success_rate": len([r[0] for r in results if r[0] is not None]) / len(tasks) if tasks else 0,
+            # Throughput: Number of paragraphs processed per second
+            "throughput": len(add_file_times) / (sum(add_file_times) if add_file_times else 1),
+            "p95_time": float(np.percentile(add_file_times, 95)) if add_file_times else None,
+            "p99_time": float(np.percentile(add_file_times, 99)) if add_file_times else None,
+            # Error counts: Number of errors encountered during processing
+            "error_count": len(tasks) - len(results),
+        },
+        "add_file_to_vs": {
+            "items_from_cache": sum(1 for r in results if r[1] is None),
+            "total_items": len(results),
+            "min_time": None,
+            "max_time": None,
+            "avg_time": None,
+            "med_time": None,
+            "total_time": sum(add_file_to_vs_times) if add_file_to_vs_times else 0,
+            "success_rate": len([r[1] for r in results if r[1] is not None]) / len(tasks) if tasks else 0,
+            "throughput": len(add_file_to_vs_times) / (sum(add_file_to_vs_times) if add_file_to_vs_times else 1),
+            "p95_time": float(np.percentile(add_file_to_vs_times, 95)) if add_file_to_vs_times else None,
+            "p99_time": float(np.percentile(add_file_to_vs_times, 99)) if add_file_to_vs_times else None,
+            "error_count": len(tasks) - len(results),
+        }
+    }
+
+    if add_file_times:
+        stats["add_file"]["min_time"] = min(add_file_times)
+        stats["add_file"]["max_time"] = max(add_file_times)
+        try:
+            stats["add_file"]["avg_time"] = sum(add_file_times) / len(add_file_times)
+        except Exception as e:
+            warn(e)
+        try:
+            stats["add_file"]["med_time"] = sorted(add_file_times)[len(add_file_times) // 2]
+        except Exception as e:
+            warn(e)
+
+    if add_file_to_vs_times:
+        stats["add_file_to_vs"]["min_time"] = min(add_file_to_vs_times)
+        stats["add_file_to_vs"]["max_time"] = max(add_file_to_vs_times)
+        try:
+            stats["add_file_to_vs"]["avg_time"] = sum(add_file_to_vs_times) / len(add_file_to_vs_times)
+        except Exception as e:
+            warn(e)
+        try:
+            stats["add_file_to_vs"]["med_time"] = sorted(add_file_to_vs_times)[len(add_file_to_vs_times) // 2]
+        except Exception as e:
+            warn(e)
+
+    TeleWProcessor(
+        event="process_paragraphs_done",
+        status=TeleItemStatus.INFO,
+        user_id=file.user_id,
+        file_name=file.file_name,
+        file_name_orig=file.file_name_orig,
+        vector_store=vector_store.name,
+        attributes={
+            "stats": stats
+        },
+        duration_seconds=ctx.loop.time() - t0
+    ).write(ctx.tele)
 
 
 async def process_paragraph(
-        client: OpenAI,
+        ctx: WorkerContext,
+        file: FileItem,
         data_dict: Dict[str, Any],
         base_name: str,
         extension: str,
         openai_files_list: List[Any],
         vector_store: Any,
         vector_store_files: List[Any]
-) -> None:
-    """Process a single paragraph from a file."""
+) -> Optional[
+    Tuple[Optional[float], Optional[float]]
+]:
+    """
+    Process a single paragraph from a document file.
+
+    This function handles the complete paragraph processing pipeline:
+    1. Converts raw dictionary data to a structured ParagraphData object
+    2. Generates a unique filename for the paragraph
+    3. Uploads the paragraph to OpenAI (with 5s timeout)
+    4. Adds the paragraph to the vector store (with 5s timeout)
+
+    Both operations are performed with error handling and telemetry reporting.
+    If any step fails, the file is marked as incomplete for future retry.
+
+    Args:
+        ctx: Worker context containing client, loop, telemetry and repository
+        file: The file item being processed
+        data_dict: Dictionary containing paragraph data from the JSONL file
+        base_name: Base name of the original file
+        extension: File extension
+        openai_files_list: List of existing OpenAI files
+        vector_store: The vector store to add paragraphs to
+        vector_store_files: List of files already in the vector store
+
+    Returns:
+        Optional tuple containing upload duration and vector store addition duration,
+        or None if any operation failed
+    """
     para = ParagraphData(**data_dict)
     filename = generate_hashed_filename(base_name, para.paragraph_text, extension)
 
-    file_data = await upload_paragraph_if_needed(client, para, filename, openai_files_list)
-    if not file_data:
+    t0 = ctx.loop.time()
+    try:
+        file_data, dur_upload_para = await asyncio.wait_for(
+            upload_paragraph_if_needed(ctx, para, filename, openai_files_list),
+            timeout=5.0
+        )
+    except Exception as e:
+        error_message = f"Error uploading paragraph: {str(e)}"
+        if isinstance(e, asyncio.TimeoutError):
+            error_message = "Timeout uploading paragraph (exceeded 5s)"
+        error(error_message)
+
+        if file.processing_status != "incomplete":
+            file.processing_status = "incomplete"
+            await ctx.files_repository.update_file(file.file_name, file)
+
+        TeleWProcessor(
+            event="upload_paragraph",
+            status=TeleItemStatus.FAILURE,
+            error_message=error_message,
+            error_recoverable=True,
+            user_id=file.user_id,
+            attributes={
+                "filename": filename,
+                "paragraph_length": len(para.paragraph_text),
+                "page_n": para.page_n,
+                "section_number": para.section_number
+            },
+            duration_seconds=ctx.loop.time() - t0
+        ).write(ctx.tele)
         return
 
-    await add_to_vector_store_if_needed(
-        client,
-        para,
-        filename,
-        file_data,
-        vector_store,
-        vector_store_files,
-    )
+    t0 = ctx.loop.time()
+    try:
+        dur_add_to_vs = await asyncio.wait_for(
+            add_to_vector_store_if_needed(
+                ctx,
+                para,
+                filename,
+                file_data,
+                vector_store,
+                vector_store_files,
+            ),
+            timeout=5.0
+        )
+    except Exception as e:
+        error_message = f"Error adding paragraph to vector store: {str(e)}"
+        if isinstance(e, asyncio.TimeoutError):
+            error_message = "Timeout adding paragraph to vector store (exceeded 5s)"
+        error(error_message)
+
+        if file.processing_status != "incomplete":
+            file.processing_status = "incomplete"
+            await ctx.files_repository.update_file(file.file_name, file)
+
+        TeleWProcessor(
+            event="add_to_vector_store",
+            status=TeleItemStatus.FAILURE,
+            error_message=error_message,
+            error_recoverable=True,
+            user_id=file.user_id,
+            file_name=file.file_name,
+            file_name_orig=file.file_name_orig,
+            vector_store=vector_store.name,
+            duration_seconds=ctx.loop.time() - t0
+        ).write(ctx.tele)
+        return dur_upload_para, None
+
+    return dur_upload_para, dur_add_to_vs
 
 
 async def upload_paragraph_if_needed(
-        client: OpenAI,
+        ctx: WorkerContext,
         para: ParagraphData,
         filename: str,
         openai_files_list: List[Any]
-) -> Optional[Any]:
+) -> Tuple[Any, float]:
     """Upload a paragraph as a file if it doesn't already exist."""
     file_data = next((f for f in openai_files_list if f.filename == filename), None)
     if not file_data:
         info(f"Uploading file: {filename}")
-        try:
-            file2upload = FileUpload(
-                para.paragraph_text.encode(),
-                filename,
-                "assistants"
-            )
-            file_data = await async_file_upload(client, file2upload)
-            info(f"OK -- file uploaded: {filename} with file_id: {file_data.id}")
-        except Exception as e:
-            error(f"Error uploading file {filename}: {str(e)}")
-            return None
-    else:
-        info(f"File {filename} already exists with file_id: {file_data.id}")
+        file2upload = FileUpload(
+            para.paragraph_text.encode(),
+            filename,
+            "assistants"
+        )
+        t0 = ctx.loop.time()
+        file_data = await async_file_upload(ctx.client, file2upload)
+        info(f"OK -- file uploaded: {filename} with file_id: {file_data.id}")
+        return file_data, ctx.loop.time() - t0
 
-    return file_data
+    info(f"File {filename} already exists with file_id: {file_data.id}")
+    return file_data, 0
 
 
 async def add_to_vector_store_if_needed(
-        client: OpenAI,
+        ctx: WorkerContext,
         para: ParagraphData,
         filename: str,
         file_data: Any,
         vector_store: Any,
         vector_store_files: List[Any],
-) -> None:
+) -> float:
     """Add a file to the vector store if it's not already there."""
     chunking_strategy = None  # todo: implement
 
     vector_store_file = next((f for f in vector_store_files if f.id == file_data.id), None)
     if vector_store_file:
         info(f"File {filename} already exists in vector store {vector_store.id}")
-        return
+        return 0
 
     info(f"Adding File {filename} to vector store {vector_store.id}")
 
@@ -355,19 +595,18 @@ async def add_to_vector_store_if_needed(
     if para.section_number:
         attributes["section_number"] = para.section_number
 
-    try:
-        vector_store_file = await async_vector_store_file_create(
-            client,
-            VectorStoreFileCreate(
-                vector_store_id=vector_store.id,
-                file_id=file_data.id,
-                attributes=attributes,
-                chunking_strategy=chunking_strategy,
-            )
+    t0 = ctx.loop.time()
+    vector_store_file = await async_vector_store_file_create(
+        ctx.client,
+        VectorStoreFileCreate(
+            vector_store_id=vector_store.id,
+            file_id=file_data.id,
+            attributes=attributes,
+            chunking_strategy=chunking_strategy,
         )
-        info(f"OK -- File {filename} added to vector store {vector_store.id} with id: {vector_store_file.id}")
-    except Exception as e:
-        error(f"Error adding file {filename} to vector store: {str(e)}")
+    )
+    info(f"OK -- File {filename} added to vector store {vector_store.id} with id: {vector_store_file.id}")
+    return ctx.loop.time() - t0
 
 
 def spawn_worker(

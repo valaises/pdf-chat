@@ -1,13 +1,25 @@
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Iterable, Dict, Optional, Union, Any
-from pathlib import Path
-
-import ujson as json
+from typing import Dict, Optional, Union, Any
 
 from pydantic import BaseModel
 
-from core.globals import TELEMETRY_DIR
+
+class RequestStatus(Enum):
+    OK = "ok"
+    NOT_OK = "not_ok"
+
+
+@dataclass
+class RequestResult:
+    event: str
+    status: RequestStatus
+    ts_created: float
+    duration_seconds: float
+    status_code: Optional[int] = None
+    attributes: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
 
 
 class TelemetryScope(Enum):
@@ -18,6 +30,7 @@ class TeleItemStatus(Enum):
     INFO = "info"
     SUCCESS = "success"
     FAILURE = "failure"
+
 
 type TeleItem = Union[TeleWProcessor]
 
@@ -59,23 +72,5 @@ class TeleWProcessor(BaseModel):
             "timestamp": self.timestamp.isoformat() if self.timestamp else None
         }
 
-    def write(self, writer: 'TeleWriter'):
+    def write(self, writer):
         writer.write(self)
-
-
-class TeleWriter:
-    def __init__(
-            self,
-            scope: TelemetryScope
-    ):
-        self.scope_dir = TELEMETRY_DIR / scope.value
-        self.scope_dir.mkdir(parents=True, exist_ok=True)
-
-    def current_file_path(self) -> Path:
-        today = datetime.now().strftime("%Y%m%d")
-        filename = f"{today}.jsonl"
-        return self.scope_dir / filename
-
-    def write(self, line: TeleItem):
-        with self.current_file_path().open('a') as f:
-            f.write(json.dumps(line.to_dict()) + '\n')

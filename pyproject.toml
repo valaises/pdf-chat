@@ -10,6 +10,7 @@ dependencies = [
     "chat-tools",
     "fastapi>=0.115.11",
     "more-itertools>=10.6.0",
+    "numba>=0.61.2",
     "numpy>=2.2.4",
     "openai>=1.68.2",
     "pymupdf>=1.25.4",
@@ -29,10 +30,12 @@ members = [
     "src/core",
     "src/coxit",
     "src/openai_wrappers",
+    "src/telemetry",
 ]
 
 [tool.uv.sources]
 core = { workspace = true }
 coxit = { workspace = true }
 openai_wrappers = { workspace = true }
+telemetry = { workspace = true }
 chat-tools = { git = "https://github.com/valaises/chat_tools.git" }

@@ -1,0 +1,2 @@
+
+SEMAPHORE_LIMIT: int = 10

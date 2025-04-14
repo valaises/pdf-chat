@@ -65,10 +65,10 @@ async def process_file_paragraphs(
     }
 
     r_upload_paragraph = [r for r in results if r.event == "upload_paragraph"]
-    stats["upload_paragraph"] = try_aggr_requests_stats(r_upload_paragraph)
+    stats["upload_paragraph"] = try_aggr_requests_stats(r_upload_paragraph).to_dict()
 
     r_add_to_vector_store = [r for r in results if r.event == "add_to_vector_store"]
-    stats["add_to_vector_store"] = try_aggr_requests_stats(r_add_to_vector_store)
+    stats["add_to_vector_store"] = try_aggr_requests_stats(r_add_to_vector_store).to_dict()
 
     TeleWProcessor(
         event="process_paragraphs_done",

@@ -32,6 +32,16 @@ class PercentileStats:
             p99=0
         )
 
+    def to_dict(self) -> Dict[str, float]:
+        return {
+            "p25": self.p25,
+            "p50": self.p50,
+            "p75": self.p75,
+            "p90": self.p90,
+            "p95": self.p95,
+            "p99": self.p99
+        }
+
 
 @dataclass
 class HistogramData:
@@ -45,12 +55,25 @@ class HistogramData:
             counts=[]
         )
 
+    def to_dict(self) -> Dict[str, List[float]]:
+        return {
+            "bins": self.bins,
+            "counts": self.counts
+        }
+
 
 @dataclass
 class MovingAverageData:
     window_size: int
     values: List[float]
     timestamps: List[float]
+
+    def to_dict(self) -> Dict[str, List[float]]:
+        return {
+            "window_size": self.window_size,
+            "values": self.values,
+            "timestamps": self.timestamps
+        }
 
 
 @dataclass
@@ -60,7 +83,6 @@ class RequestStats:
     max: float
     total: float
     count: int
-    median: float
     std_dev: float
     variance: float
     percentiles: PercentileStats
@@ -78,7 +100,6 @@ class RequestStats:
             max=0,
             total=0,
             count=0,
-            median=0,
             std_dev=0,
             variance=0,
             percentiles=PercentileStats.default(),
@@ -88,6 +109,23 @@ class RequestStats:
             throughput=0,
             moving_averages=[]
         )
+
+    def to_dict(self) -> Dict[str, any]:
+        return {
+            "avg": self.avg,
+            "min": self.min,
+            "max": self.max,
+            "total": self.total,
+            "count": self.count,
+            "std_dev": self.std_dev,
+            "variance": self.variance,
+            "percentiles": self.percentiles.to_dict(),
+            "status_counts": self.status_counts,
+            "error_counts": self.error_counts,
+            "histogram": self.histogram.to_dict(),
+            "throughput": self.throughput,
+            "moving_averages": [ma.to_dict() for ma in self.moving_averages]
+        }
 
 
 @jit(nopython=True)
@@ -177,7 +215,7 @@ def aggr_requests_stats(requests: List[RequestResult]) -> RequestStats:
 
     # Calculate moving averages
     moving_averages = []
-    window_sizes = [5, 10, 20]  # Different window sizes
+    window_sizes = [20]
 
     sorted_requests = sorted(requests, key=lambda r: r.ts_created)
     sorted_durations = [r.duration_seconds for r in sorted_requests]
@@ -218,7 +256,6 @@ def aggr_requests_stats(requests: List[RequestResult]) -> RequestStats:
         max=float(np.max(durations)),
         total=float(np.sum(durations)),
         count=len(durations),
-        median=float(np.median(durations)),
         std_dev=float(np.std(durations)),
         variance=float(np.var(durations)),
         percentiles=PercentileStats(

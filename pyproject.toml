@@ -1,6 +1,15 @@
 [project]
 name = "chat-with-pdf-poc"
-version = "0.1.0"
+
+# Use alpha (a) for early internal testing
+# Use beta (b) for wider testing when features are complete
+# Use release candidates (rc) for final pre-release testing
+# Use .devN for dev release
+# Use +experimental for experimental builds
+# Use incrementing numbers after each identifier
+
+version = "0.1.0+experimental.sem10"
+
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"

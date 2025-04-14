@@ -5,6 +5,8 @@ from typing import Dict, Optional, Union, Any
 
 from pydantic import BaseModel
 
+from core.globals import VERSION
+
 
 class RequestStatus(Enum):
     OK = "ok"
@@ -54,6 +56,8 @@ class TeleWProcessor(BaseModel):
     duration_seconds: Optional[float] = None
     timestamp: datetime = datetime.now()
 
+    app_version: str = VERSION
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the model to a dictionary."""
         return {
@@ -69,7 +73,8 @@ class TeleWProcessor(BaseModel):
             "file_id": self.file_id,
             "attributes": self.attributes,
             "duration_seconds": self.duration_seconds,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "app_version": self.app_version
         }
 
     def write(self, writer):

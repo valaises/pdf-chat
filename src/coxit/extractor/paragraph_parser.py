@@ -5,9 +5,7 @@ from typing import Optional, List, Dict, Tuple, Set
 
 import pymupdf
 
-import coxit.extractor.const as c
 from core.logger import warn
-from coxit.extractor.pdf_extractor import PDFExtractor
 
 
 @dataclass
@@ -561,36 +559,3 @@ class ParagraphParser:
                         page_paragraphs.append(paragraph)
 
         return page_paragraphs
-
-
-class SectionPageMapper:
-    """
-    Maps section numbers to page numbers.
-    """
-
-    def __init__(self, file_data: bytes, file_name: str):
-        self.file_data = file_data
-        self.file_name = file_name
-
-    def map_sections_to_pages(self) -> Dict[int, Optional[str]]:
-        """
-        Creates a mapping of page numbers to section numbers.
-        """
-        # Extract sections using the existing functionality
-        extractor = PDFExtractor(
-            file_data=self.file_data,
-            file_name=self.file_name
-        )
-        sections_dict = extractor.extract_sections_from_colontitles()
-
-        # Create a mapping of page numbers to section numbers
-        page_to_section = {}
-
-        for section_name, range_dict in sections_dict.items():
-            start_page = range_dict[c.SECTION_START]
-            end_page = range_dict[c.SECTION_END]
-
-            for page_num in range(start_page, end_page + 1):
-                page_to_section[page_num] = section_name
-
-        return page_to_section

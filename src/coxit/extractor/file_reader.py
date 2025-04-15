@@ -29,17 +29,8 @@ class FileReader:
         # Open the PDF document
         pdf_doc = pymupdf.open(stream=self._file_data, filetype="pdf")
 
-        # Pipeline 1: Map sections to pages
-        section_mapper = SectionPageMapper(self._file_data, self._file_name)
-        page_to_section = section_mapper.map_sections_to_pages()
-
-        # Pipeline 2: Extract paragraphs
         paragraph_parser = ParagraphParser(pdf_doc)
         paragraphs = paragraph_parser.extract_paragraphs()
-
-        # Join results: Assign section numbers to paragraphs
-        for paragraph in paragraphs:
-            paragraph.section_number = page_to_section.get(paragraph.page_n)
 
         if visualize:
             output_dir = f"highlighted_paragraphs_{self._file_name}"

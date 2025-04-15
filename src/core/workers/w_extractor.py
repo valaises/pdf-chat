@@ -10,7 +10,7 @@ from core.workers.w_abstract import Worker
 from coxit.extractor.file_reader import FileReader
 
 
-VISUALIZE = True
+VISUALIZE = False
 
 
 def worker(

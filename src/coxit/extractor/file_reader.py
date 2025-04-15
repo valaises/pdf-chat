@@ -6,7 +6,7 @@ from typing import List
 import pymupdf
 
 from coxit.extractor.highlight_viz import visualize_paragraphs
-from coxit.extractor.paragraph_parser import ParagraphData, ParagraphParser, SectionPageMapper
+from coxit.extractor.paragraph_parser import ParagraphData, ParagraphParser
 
 
 class FileReader:

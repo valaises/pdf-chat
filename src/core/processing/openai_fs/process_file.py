@@ -76,6 +76,7 @@ def process_single_file(
         error(error_message)
         mark_file_as_error(file, ctx.files_repository, error_message)
         TeleWProcessor(
+            proc_strategy="openai_fs",
             event="get_jsonl_file_path",
             status=TeleItemStatus.FAILURE,
             error_message=error_message,
@@ -94,6 +95,7 @@ def process_single_file(
         mark_file_as_error(file, ctx.files_repository, error_message)
         error(error_message)
         TeleWProcessor(
+            proc_strategy="openai_fs",
             event="ensure_vector_store_exists",
             status=TeleItemStatus.FAILURE,
             error_message=error_message,
@@ -113,6 +115,7 @@ def process_single_file(
         mark_file_as_error(file, ctx.files_repository, error_message)
         error(error_message)
         TeleWProcessor(
+            proc_strategy="openai_fs",
             error_message=error_message,
             error_recoverable=False,
             event="get_vector_store_files",
@@ -143,6 +146,7 @@ def process_single_file(
         file.processing_status = "incomplete"
         ctx.files_repository.update_file_sync(file.file_name, file)
         TeleWProcessor(
+            proc_strategy="openai_fs",
             error_message=error_message,
             error_recoverable=True,
             event="process_file_paragraphs",
@@ -155,6 +159,7 @@ def process_single_file(
         ).write(ctx.tele)
     else:
         TeleWProcessor(
+            proc_strategy="openai_fs",
             event="process_file_paragraphs",
             status=TeleItemStatus.SUCCESS,
             user_id=file.user_id,
@@ -169,6 +174,7 @@ def process_single_file(
         ctx.files_repository.update_file_sync(file.file_name, file)
 
     TeleWProcessor(
+        proc_strategy="openai_fs",
         event="process_file_done",
         status=TeleItemStatus.INFO,
         user_id=file.user_id,

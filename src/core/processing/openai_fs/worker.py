@@ -1,6 +1,7 @@
 import asyncio
 import threading
 import time
+
 from typing import List, Tuple, Any
 
 from openai import OpenAI
@@ -88,6 +89,7 @@ def p_openai_fs_worker(
             except Exception as e:
                 error(f"Error retrieving OpenAI files_list or vector_stores_list: {str(e)}")
                 TeleWProcessor(
+                    proc_strategy="openai_fs",
                     event="get_openai_resources",
                     status=TeleItemStatus.FAILURE,
                     error_message=str(e),
@@ -97,6 +99,7 @@ def p_openai_fs_worker(
                 continue
             else:
                 TeleWProcessor(
+                    proc_strategy="openai_fs",
                     event="get_openai_resources",
                     status=TeleItemStatus.SUCCESS,
                     duration_seconds = time.time() - t0,

@@ -71,6 +71,7 @@ async def process_file_paragraphs(
     stats["add_to_vector_store"] = try_aggr_requests_stats(r_add_to_vector_store).to_dict()
 
     TeleWProcessor(
+        proc_strategy="openai_fs",
         event="process_paragraphs_done",
         status=TeleItemStatus.INFO,
         user_id=file.user_id,

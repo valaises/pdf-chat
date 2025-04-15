@@ -39,6 +39,7 @@ type TeleItem = Union[TeleWProcessor]
 
 class TeleWProcessor(BaseModel):
     version: str = "v0"
+    proc_strategy: str
     event: str
 
     status: TeleItemStatus
@@ -62,6 +63,7 @@ class TeleWProcessor(BaseModel):
         """Convert the model to a dictionary."""
         return {
             "version": self.version,
+            "proc_strategy": self.proc_strategy,
             "event": self.event,
             "status": self.status.value,
             "error_message": self.error_message,

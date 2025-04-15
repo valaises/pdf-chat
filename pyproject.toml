@@ -1,6 +1,15 @@
 [project]
 name = "chat-with-pdf-poc"
-version = "0.1.0"
+
+# Use alpha (a) for early internal testing
+# Use beta (b) for wider testing when features are complete
+# Use release candidates (rc) for final pre-release testing
+# Use .devN for dev release
+# Use +experimental for experimental builds
+# Use incrementing numbers after each identifier
+
+version = "0.1.0+experimental.sem10"
+
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -10,6 +19,7 @@ dependencies = [
     "chat-tools",
     "fastapi>=0.115.11",
     "more-itertools>=10.6.0",
+    "numba>=0.61.2",
     "numpy>=2.2.4",
     "openai>=1.68.2",
     "pymupdf>=1.25.4",
@@ -29,10 +39,12 @@ members = [
     "src/core",
     "src/coxit",
     "src/openai_wrappers",
+    "src/telemetry",
 ]
 
 [tool.uv.sources]
 core = { workspace = true }
 coxit = { workspace = true }
 openai_wrappers = { workspace = true }
+telemetry = { workspace = true }
 chat-tools = { git = "https://github.com/valaises/chat_tools.git" }

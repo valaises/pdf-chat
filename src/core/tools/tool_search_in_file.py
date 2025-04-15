@@ -4,9 +4,9 @@ import time
 from typing import Dict, Any, List
 
 from core.logger import warn, error, info
+from core.processing.p_utils import generate_paragraph_id
 from core.tools.tool_context import ToolContext
 from core.tools.tool_utils import build_tool_call
-from core.workers.w_utils import generate_paragraph_id
 from openai_wrappers.api_vector_store import VectorStoreSearch, vector_store_search
 from chat_tools.tool_usage.tool_abstract import Tool, ToolProps
 from openai_wrappers.types import (

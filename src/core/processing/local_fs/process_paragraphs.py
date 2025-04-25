@@ -1,13 +1,16 @@
 import asyncio
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Set
 
 import ujson as json
 from more_itertools import chunked
 
+from core.globals import SAVE_STRATEGY
 from core.logger import error
 from core.processing.local_fs.const import SEMAPHORE_LIMIT, EMBEDDING_BATCH_SIZE
-from core.processing.p_models import WorkerContext, ParagraphData, ParagraphVectorData
+from core.processing.local_fs.models import WorkerContext
+from core.processing.local_fs.save_strategies import save_vectors_to_redis
+from core.processing.p_models import ParagraphData, ParagraphVectorData
 from core.processing.p_utils import (
     jsonl_reader,
     generate_paragraph_id, try_aggr_requests_stats
@@ -56,9 +59,11 @@ async def process_paragraphs_batch(
         chunks = chunkify_text(p.paragraph_text, 256, 1024)
         for idx, chunk in enumerate(chunks):
             p_vecs.append(ParagraphVectorData(
+                paragraph_box=p.paragraph_box,
                 paragraph_id=p.paragraph_id,
                 idx=idx,
                 text=chunk,
+                page_n=p.page_n,
             ))
 
     res_requests = []
@@ -113,7 +118,8 @@ async def process_file_paragraphs(
         ctx: WorkerContext,
         file: FileItem,
         jsonl_file_path: Path,
-        jsonl_vec: Path
+        jsonl_vec: Path,
+        processed_paragraphs: Set[str],
 ):
     t0 = ctx.loop.time()
     semaphore = asyncio.Semaphore(SEMAPHORE_LIMIT)
@@ -131,6 +137,9 @@ async def process_file_paragraphs(
             if not p.paragraph_id:
                 p.paragraph_id = generate_paragraph_id(p.paragraph_text)
 
+            if p.paragraph_id in processed_paragraphs:
+                continue
+
         tasks.append(asyncio.create_task(
             process_paragraphs_batch_with_semaphore(paragraphs)
         ))
@@ -142,14 +151,42 @@ async def process_file_paragraphs(
     req_results: List[RequestResult] = [r_i for r in results for r_i in r[0]]
     p_vecs: List[ParagraphVectorData] = [r_i for r in results for r_i in r[1]]
 
-    # todo: change to a when ready
-    with jsonl_vec.open("w") as f:
-        for p_vec in p_vecs:
-            f.write(json.dumps(p_vec.model_dump()) + "\n")
-
     stats = {
         "fetch_embeddings": try_aggr_requests_stats(req_results).to_dict()
     }
+
+    # todo: add save_strategy time -t0 into telemetry
+    match SAVE_STRATEGY:
+        case "local":
+            # todo: change to "a" when ready
+            with jsonl_vec.open("w") as f:
+                for p_vec in p_vecs:
+                    f.write(json.dumps(p_vec.model_dump()) + "\n")
+
+        case "redis":
+            assert ctx.repo_redis is not None
+            try:
+                save_vectors_to_redis(ctx, file, p_vecs)
+            except Exception as e:
+                error_message = f"Error occurred when saving vectors to redis: {str(e)}"
+                error(error_message)
+                TeleWProcessor(
+                    proc_strategy="local_fs",
+                    event="process_paragraphs_done",
+                    status=TeleItemStatus.FAILURE,
+                    user_id=file.user_id,
+                    file_name=file.file_name,
+                    file_name_orig=file.file_name_orig,
+                    attributes={
+                        "stats": stats
+                    },
+                    error_message=error_message,
+                ).write(ctx.tele)
+                raise Exception(error_message)
+
+        case _:
+            raise Exception(f"Unexpected save strategy: {SAVE_STRATEGY}")
+
 
     TeleWProcessor(
         proc_strategy="local_fs",

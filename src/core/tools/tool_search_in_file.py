@@ -1,17 +1,24 @@
 import json
 import time
+import asyncio
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple, Optional
 
+import openai
+
+from core.globals import PROCESSING_STRATEGY, SAVE_STRATEGY
 from core.logger import warn, error, info
 from core.processing.p_utils import generate_paragraph_id
+from core.repositories.repo_files import FileItem
+from core.repositories.repo_redis import RedisRepository
 from core.tools.tool_context import ToolContext
 from core.tools.tool_utils import build_tool_call
+from openai_wrappers.api_embeddings import async_create_embeddings
 from openai_wrappers.api_vector_store import VectorStoreSearch, vector_store_search
 from chat_tools.tool_usage.tool_abstract import Tool, ToolProps
 from openai_wrappers.types import (
     ToolCall, ChatMessage,
-    ChatMessageContentItemDocSearch
+    ChatMessageContentItemDocSearch, ChatMessageTool
 )
 from chat_tools.chat_models import (ChatTool,
     ChatToolFunction, ChatToolParameters,
@@ -39,13 +46,167 @@ SYSTEM = """TOOL: search_in_doc
           
         search_in_doc produces:
         * pieces of text containing relevant information that will help you to answer user's question in a format:
-          {"text": "text", "id": "pid-12345678-1234"}
+          {"text": "text", "id": "pid-12345678"}
           
         When using text for composing answer, obligatory refer to id after piece of generated answer.
         Example:
           Sky is blue because of a phenomenon called Rayleigh scattering. [pid-12345678] Answer continues...
           Would you like me to help yo with anything else?
 """
+
+
+async def openai_fs_strat(
+        ctx, tool_name, document, query, tool_call
+) -> Tuple[bool, List[ChatMessageTool]]:
+    post = VectorStoreSearch(
+        vector_store_id=document.vector_store_id,
+        query=query
+    )
+
+    try:
+        start_time = time.time()
+        resp = await vector_store_search(ctx.http_session, post)
+        info(f"Vector store search for '{query}' took {time.time() - start_time:.3f} seconds")
+    except Exception as e:
+        err = f"Error while executing tool {tool_name}: vector store search failed: {str(e)}"
+        error(err)
+        return False, [
+            build_tool_call(
+                err, tool_call
+            )
+        ]
+
+    content = []
+    for obj in resp:
+        highlight_box = None
+        try:
+            highlight_box = json.loads(obj.attributes.get("paragraph_box", json.dumps(None)))
+        except Exception:
+            pass
+        page_n = None
+        try:
+            page_n = int(obj.attributes.get("page_n", None))
+        except Exception:
+            pass
+
+        section_name = obj.attributes.get("section_number")
+
+        for content_i in obj.content:
+            paragraph_id = obj.attributes.get("paragraph_id", generate_paragraph_id(content_i.text))
+
+            content.append(ChatMessageContentItemDocSearch(
+                paragraph_id=paragraph_id,
+                text=content_i.text,
+                type="doc_search",
+                highlight_box=highlight_box,
+                page_n=page_n,
+                section_name=section_name,
+            ))
+
+    if not content:
+        return True, [
+            build_tool_call(
+                f"Executed tool {tool_name}: no results found for query '{query}'",
+                tool_call
+            )
+        ]
+
+    return True, [
+        build_tool_call(
+            content, tool_call
+        )
+    ]
+
+
+# todo: add telemetry
+async def local_fs_redis_strat(
+        openai_client: openai.OpenAI,
+        redis_repo: RedisRepository,
+        tool_name: str,
+        document: FileItem,
+        query: str,
+        tool_call: ToolCall,
+):
+    loop = asyncio.get_running_loop()
+
+    t0 = loop.time()
+    try:
+        res = await asyncio.wait_for(
+            async_create_embeddings(openai_client, [query]),
+            timeout=5.
+        )
+        embedding = res.data[0].embedding
+        assert embedding is not None, "Embedding is empty"
+    except Exception as e:
+        err = f"Failed to fetch embeddings: {str(e)}"
+        return False, [
+            build_tool_call(
+                f"Error executing tool {tool_name}: {err}", tool_call
+            )
+        ]
+    info(f"retrieved embedding in {loop.time() - t0:2f}s")
+
+    t0 = loop.time()
+    search_results = redis_repo.search_vectors(document.file_name, embedding, 10)
+    info(f"vector search resolved in {loop.time() - t0:2f}s")
+
+    content = []
+    for s in search_results:
+        content.append(ChatMessageContentItemDocSearch(
+            paragraph_id=s.metadata["id"],
+            text=s.metadata["text"],
+            type="doc_search",
+            highlight_box=s.metadata["paragraph_box"],
+            page_n=int(s.metadata["page_n"]),
+        ))
+
+    if not content:
+        return True, [
+            build_tool_call(
+                f"Executed tool {tool_name}: no results found for query '{query}'",
+                tool_call
+            )
+        ]
+
+    return True, [
+        build_tool_call(
+            content, tool_call
+        )
+    ]
+
+
+async def get_content_based_on_processing_and_save_strats(
+        ctx: ToolContext,
+        tool_name: str,
+        document: FileItem,
+        query: str,
+        tool_call: ToolCall,
+) -> Tuple[bool, List[ChatMessageTool]]:
+    if PROCESSING_STRATEGY == "openai_fs":
+        return await openai_fs_strat(
+            ctx, tool_name, document, query, tool_call
+        )
+
+    elif PROCESSING_STRATEGY == "local_fs":
+        if SAVE_STRATEGY == "local":
+            raise ValueError("Local FS processing strategy is not supported yet")
+
+        elif SAVE_STRATEGY == "redis":
+            assert ctx.redis_repository is not None, "Redis repository is not initialized"
+            redis_repo: RedisRepository = ctx.redis_repository
+
+            assert ctx.openai is not None, "OpenAI client is not initialized"
+            openai_client: openai.OpenAI = ctx.openai
+
+            return await local_fs_redis_strat(
+                openai_client, redis_repo, tool_name, document, query, tool_call
+            )
+
+        else:
+            raise ValueError(f"Unknown save strategy: {SAVE_STRATEGY}")
+
+    else:
+        raise ValueError(f"Unknown processing strategy: {PROCESSING_STRATEGY}")
 
 
 class ToolSearchInFile(Tool):
@@ -120,7 +281,7 @@ class ToolSearchInFile(Tool):
                 )
             ]
 
-        document = next((f for f in files if f.file_name_orig == document_name), None)
+        document: Optional[FileItem] = next((f for f in files if f.file_name_orig == document_name), None)
         if not document:
             return False, [
                 build_tool_call(
@@ -130,63 +291,8 @@ class ToolSearchInFile(Tool):
                 )
             ]
 
-        post = VectorStoreSearch(
-            vector_store_id=document.vector_store_id,
-            query=query
-        )
-
-        try:
-            start_time = time.time()
-            resp = await vector_store_search(ctx.http_session, post)
-            info(f"Vector store search for '{query}' took {time.time() - start_time:.3f} seconds")
-        except Exception as e:
-            err = f"Error while executing tool {self.name}: vector store search failed: {str(e)}"
-            error(err)
-            return False, [
-                build_tool_call(
-                    err, tool_call
-                )
-            ]
-
-        content = []
-        for obj in resp:
-            highlight_box = None
-            try:
-                highlight_box = json.loads(obj.attributes.get("paragraph_box", json.dumps(None)))
-            except Exception:
-                pass
-            page_n = None
-            try:
-                page_n = int(obj.attributes.get("page_n", None))
-            except Exception:
-                pass
-
-            section_name = obj.attributes.get("section_number")
-
-            for content_i in obj.content:
-                paragraph_id = obj.attributes.get("paragraph_id", generate_paragraph_id(content_i.text))
-
-                content.append(ChatMessageContentItemDocSearch(
-                    paragraph_id=paragraph_id,
-                    text=content_i.text,
-                    type="doc_search",
-                    highlight_box=highlight_box,
-                    page_n=page_n,
-                    section_name=section_name,
-                ))
-
-        if not content:
-            return True, [
-                build_tool_call(
-                    f"No results found for the query: {query}.",
-                    tool_call
-                )
-            ]
-        return True, [
-            build_tool_call(
-                content, tool_call
-            )
-        ]
+        res = await get_content_based_on_processing_and_save_strats(ctx, self.name, document, query, tool_call)
+        return res
 
     def as_chat_tool(self) -> ChatTool:
         return ChatTool(

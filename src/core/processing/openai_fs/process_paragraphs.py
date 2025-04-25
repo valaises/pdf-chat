@@ -1,9 +1,9 @@
 import asyncio
 
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
-from core.logger import error, exception
+from core.logger import error
 from core.processing.openai_fs.const import SEMAPHORE_LIMIT
 from core.processing.openai_fs.uploads import upload_paragraph_if_needed, add_to_vector_store_if_needed
 from core.processing.p_models import WorkerContext, ParagraphData

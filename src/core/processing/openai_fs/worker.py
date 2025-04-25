@@ -6,11 +6,11 @@ from typing import List, Tuple, Any
 
 from openai import OpenAI
 
-from core.logger import error
+from core.logger import error, info
 from core.processing.openai_fs.process_file import process_single_file
 from core.processing.p_models import WorkerContext
 from core.processing.p_utils import get_files_to_process, reset_stuck_files
-from core.repositories.repo_files import FilesRepository, FileItem
+from core.repositories.repo_files import FilesRepository
 from openai_wrappers.api_files import files_list
 from openai_wrappers.api_vector_store import vector_stores_list
 from telemetry.models import TelemetryScope, TeleWProcessor, TeleItemStatus
@@ -28,6 +28,7 @@ def p_openai_fs_worker(
         stop_event: threading.Event,
         files_repository: FilesRepository
 ) -> None:
+    info("OPENAI_FS_WORKER: Starting...")
     """
     Main worker function that processes files in a continuous loop until stopped.
 

@@ -20,6 +20,8 @@ class ParagraphData(BaseModel):
 
 class ParagraphVectorData(BaseModel):
     paragraph_id: str
+    page_n: int
+    paragraph_box: Tuple[float, float, float, float]
     idx: int
     text: str
     embedding: Optional[List[float]] = None

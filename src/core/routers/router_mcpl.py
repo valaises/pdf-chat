@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Optional
 
 from chat_tools.tool_usage import ToolProps
 from fastapi import APIRouter, status
+from openai import OpenAI
 from pydantic import BaseModel
 
 import aiohttp
@@ -9,6 +10,7 @@ import aiohttp
 from chat_tools.chat_models import ChatTool
 
 from core.repositories.repo_files import FilesRepository
+from core.repositories.repo_redis import RedisRepository
 from core.routers.schemas import  error_constructor, ErrorResponse
 from core.tools.tool_context import ToolContext
 from core.tools.tools import get_tools_list, execute_tools, get_tool_props
@@ -37,12 +39,16 @@ class MCPLRouter(APIRouter):
             self,
             http_session: aiohttp.ClientSession,
             files_repository: FilesRepository,
+            redis_repository: Optional[RedisRepository] = None,
+            openai: Optional[OpenAI] = None,
             *args, **kwargs
     ):
         kwargs["tags"] = ["MCPL"]
         super().__init__(*args, **kwargs)
         self.http_session = http_session
         self._files_repository = files_repository
+        self._redis_repository = redis_repository
+        self._openai = openai
 
         self.add_api_route(
             "/v1/tools",
@@ -198,6 +204,8 @@ class MCPLRouter(APIRouter):
                 self.http_session,
                 post.user_id,
                 self._files_repository,
+                self._redis_repository,
+                self._openai,
             )
             tool_res_messages = await execute_tools(tool_context, post.messages)
             return ToolResMessagesResponse(

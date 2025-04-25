@@ -1,6 +1,4 @@
 import hashlib
-import string
-import random
 
 from typing import Iterator, Dict, List, Optional
 from pathlib import Path
@@ -59,12 +57,11 @@ def generate_paragraph_id(paragraph_text: str) -> str:
         paragraph_text: The text of the paragraph
 
     Returns:
-        A unique paragraph ID with format pid-{hash}-{random}
+        A unique paragraph ID with format pid-{hash}
     """
     # Generate a random string of 4 characters
-    random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
     # Combine content hash with random suffix
-    return f"pid-{generate_content_hash(paragraph_text, length=6)}-{random_suffix}"
+    return f"pid-{generate_content_hash(paragraph_text, length=8)}"
 
 
 def generate_content_hash(content: str, salt: str = "", length: int = 16) -> str:

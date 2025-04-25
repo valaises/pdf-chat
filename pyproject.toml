@@ -8,7 +8,7 @@ name = "chat-with-pdf-poc"
 # Use +experimental for experimental builds
 # Use incrementing numbers after each identifier
 
-version = "0.1.0+experimental.sem10"
+version = "0.1.1a"
 
 description = "Add your description here"
 readme = "README.md"
@@ -25,6 +25,7 @@ dependencies = [
     "pymupdf>=1.25.4",
     "pymupdf-fonts",
     "pymupdf4llm>=0.0.17",
+    "redis>=5.2.1",
     "scalar-fastapi>=1.0.3",
     "termcolor>=2.5.0",
     "ujson>=5.10.0",

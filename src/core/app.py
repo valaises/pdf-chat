@@ -1,10 +1,13 @@
 import aiohttp
+import openai
 
 from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 
+from core.globals import PROCESSING_STRATEGY, SAVE_STRATEGY
 from core.repositories.repo_files import FilesRepository
+from core.repositories.repo_redis import RedisRepository
 from core.routers.router_base import BaseRouter
 from core.routers.router_files import FilesRouter
 from core.routers.router_mcpl import MCPLRouter
@@ -22,6 +25,8 @@ class App(FastAPI):
         super().__init__(*args, **kwargs)
         self.http_session: aiohttp.ClientSession
         self.files_repository = files_repository
+        self.redis_repository = None
+        self.openai = openai.OpenAI()
 
         self._setup_middlewares()
         self.add_event_handler("startup", self._startup_events)
@@ -40,6 +45,10 @@ class App(FastAPI):
     async def _startup_events(self):
         self.http_session = aiohttp.ClientSession()
 
+        if PROCESSING_STRATEGY == "local_fs" and SAVE_STRATEGY == "redis":
+            self.redis_repository = RedisRepository()
+            self.redis_repository.connect()
+
         for router in self._routers():
             self.include_router(router)
 
@@ -47,6 +56,8 @@ class App(FastAPI):
     async def _shutdown_events(self):
         if self.http_session:
             await self.http_session.close()
+        if self.redis_repository is not None:
+            self.redis_repository.close()
 
     def _routers(self):
         return [
@@ -54,6 +65,8 @@ class App(FastAPI):
             MCPLRouter(
                 self.http_session,
                 self.files_repository,
+                self.redis_repository,
+                self.openai,
             ),
             FilesRouter(
                 self.files_repository,

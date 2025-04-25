@@ -2,18 +2,23 @@ import time
 
 from core.logger import info, error, exception
 from core.processing.local_fs.process_paragraphs import process_file_paragraphs
+from core.processing.local_fs.models import WorkerContext
 from core.processing.openai_fs.process_file import get_jsonl_file_path, mark_file_as_error
-from core.processing.p_models import WorkerContext
 from core.repositories.repo_files import FileItem
 from telemetry.models import (
     TeleWProcessor, TeleItemStatus
 )
 
-# todo: verify vector file is not empty, do not retry processed paragraphs
+
 def process_single_file(ctx: WorkerContext, file: FileItem) -> None:
     info(f"Processing file: {file.file_name_orig} STATUS={file.processing_status}")
     file.processing_status = "processing"
     ctx.files_repository.update_file_sync(file.file_name, file)
+
+    processed_paragraphs = set()
+    if ctx.repo_redis is not None:
+        processed_paragraphs = set(ctx.repo_redis.get_all_vector_ids(file.file_name))
+        info(f"Found {len(processed_paragraphs)} processed paragraphs in Redis")
 
     ts_process_single_file = time.time()
 
@@ -43,7 +48,8 @@ def process_single_file(ctx: WorkerContext, file: FileItem) -> None:
             ctx,
             file,
             jsonl_file_path,
-            jsonl_vec
+            jsonl_vec,
+            processed_paragraphs,
         ))
     except Exception as e:
         error_message = f"Error processing paragraphs:\n{file}\n{str(e)}"

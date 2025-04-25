@@ -4,13 +4,13 @@ import asyncio
 
 from typing import Dict, Any, List, Tuple, Optional
 
+import numpy as np
 import openai
 
 from core.globals import PROCESSING_STRATEGY, SAVE_STRATEGY
 from core.logger import warn, error, info
 from core.processing.p_utils import generate_paragraph_id
 from core.repositories.repo_files import FileItem
-from core.repositories.repo_redis import RedisRepository
 from core.tools.tool_context import ToolContext
 from core.tools.tool_utils import build_tool_call
 from openai_wrappers.api_embeddings import async_create_embeddings
@@ -24,6 +24,9 @@ from chat_tools.chat_models import (ChatTool,
     ChatToolFunction, ChatToolParameters,
     ChatToolParameterProperty
 )
+
+from vectors.repositories.repo_milvus import MilvusRepository, collection_from_file_name
+from vectors.repositories.repo_redis import RedisRepository
 
 
 SYSTEM = """TOOL: search_in_doc
@@ -118,6 +121,39 @@ async def openai_fs_strat(
     ]
 
 
+async def create_query_embedding(openai_client: openai.OpenAI, query: str, timeout: float = 5.0) -> Tuple[
+    bool, Any, Optional[str]]:
+    """
+    Create embedding for a search query.
+
+    Args:
+        openai_client: The OpenAI client instance
+        query: The search query text
+        timeout: Maximum time to wait for embedding creation
+
+    Returns:
+        Tuple containing:
+        - Success flag (bool)
+        - Embedding if successful, None otherwise
+        - Error message if failed, None otherwise
+    """
+    loop = asyncio.get_running_loop()
+    t0 = loop.time()
+
+    try:
+        res = await asyncio.wait_for(
+            async_create_embeddings(openai_client, [query]),
+            timeout=timeout
+        )
+        embedding = res.data[0].embedding
+        assert embedding is not None, "Embedding is empty"
+        info(f"retrieved embedding in {loop.time() - t0:.2f}s")
+        return True, embedding, None
+    except Exception as e:
+        err = f"Failed to fetch embeddings: {str(e)}"
+        return False, None, err
+
+
 # todo: add telemetry
 async def local_fs_redis_strat(
         openai_client: openai.OpenAI,
@@ -127,25 +163,15 @@ async def local_fs_redis_strat(
         query: str,
         tool_call: ToolCall,
 ):
-    loop = asyncio.get_running_loop()
-
-    t0 = loop.time()
-    try:
-        res = await asyncio.wait_for(
-            async_create_embeddings(openai_client, [query]),
-            timeout=5.
-        )
-        embedding = res.data[0].embedding
-        assert embedding is not None, "Embedding is empty"
-    except Exception as e:
-        err = f"Failed to fetch embeddings: {str(e)}"
+    success, embedding, err = await create_query_embedding(openai_client, query)
+    if not success:
         return False, [
             build_tool_call(
                 f"Error executing tool {tool_name}: {err}", tool_call
             )
         ]
-    info(f"retrieved embedding in {loop.time() - t0:2f}s")
 
+    loop = asyncio.get_running_loop()
     t0 = loop.time()
     search_results = redis_repo.search_vectors(document.file_name, embedding, 10)
     info(f"vector search resolved in {loop.time() - t0:2f}s")
@@ -175,6 +201,34 @@ async def local_fs_redis_strat(
     ]
 
 
+async def local_fs_milvus_strat(
+        openai_client: openai.OpenAI,
+        milvus_repo: MilvusRepository,
+        tool_name: str,
+        document: FileItem,
+        query: str,
+        tool_call: ToolCall,
+):
+    success, embedding, err = await create_query_embedding(openai_client, query)
+    if not success:
+        return False, [
+            build_tool_call(
+                f"Error executing tool {tool_name}: {err}", tool_call
+            )
+        ]
+
+    loop = asyncio.get_running_loop()
+    t0 = loop.time()
+    search_results = milvus_repo.search(
+        collection_from_file_name(document.file_name),
+        np.array(embedding)
+    )
+    info(search_results)
+    info(f"vector search resolved in {loop.time() - t0:2f}s")
+
+    raise NotImplementedError("not implemented")
+
+
 async def get_content_based_on_processing_and_save_strats(
         ctx: ToolContext,
         tool_name: str,
@@ -200,6 +254,17 @@ async def get_content_based_on_processing_and_save_strats(
 
             return await local_fs_redis_strat(
                 openai_client, redis_repo, tool_name, document, query, tool_call
+            )
+
+        elif SAVE_STRATEGY == "milvus":
+            assert ctx.milvus_repository is not None, "Milvus repository is not initialized"
+            milvus_repo: MilvusRepository = ctx.milvus_repository
+
+            assert ctx.openai is not None, "OpenAI client is not initialized"
+            openai_client: openai.OpenAI = ctx.openai
+
+            return await local_fs_milvus_strat(
+                openai_client, milvus_repo, tool_name, document, query, tool_call
             )
 
         else:

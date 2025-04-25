@@ -10,10 +10,11 @@ import aiohttp
 from chat_tools.chat_models import ChatTool
 
 from core.repositories.repo_files import FilesRepository
-from core.repositories.repo_redis import RedisRepository
 from core.routers.schemas import  error_constructor, ErrorResponse
 from core.tools.tool_context import ToolContext
 from core.tools.tools import get_tools_list, execute_tools, get_tool_props
+from vectors.repositories.repo_milvus import MilvusRepository
+from vectors.repositories.repo_redis import RedisRepository
 from openai_wrappers.types import ChatMessage
 
 
@@ -40,6 +41,8 @@ class MCPLRouter(APIRouter):
             http_session: aiohttp.ClientSession,
             files_repository: FilesRepository,
             redis_repository: Optional[RedisRepository] = None,
+            milvus_repository: Optional[MilvusRepository] = None,
+
             openai: Optional[OpenAI] = None,
             *args, **kwargs
     ):
@@ -48,6 +51,8 @@ class MCPLRouter(APIRouter):
         self.http_session = http_session
         self._files_repository = files_repository
         self._redis_repository = redis_repository
+        self._milvus_repository = milvus_repository
+
         self._openai = openai
 
         self.add_api_route(
@@ -205,6 +210,8 @@ class MCPLRouter(APIRouter):
                 post.user_id,
                 self._files_repository,
                 self._redis_repository,
+                self._milvus_repository,
+
                 self._openai,
             )
             tool_res_messages = await execute_tools(tool_context, post.messages)

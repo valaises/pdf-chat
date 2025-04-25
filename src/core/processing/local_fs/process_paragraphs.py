@@ -9,7 +9,8 @@ from core.globals import SAVE_STRATEGY
 from core.logger import error
 from core.processing.local_fs.const import SEMAPHORE_LIMIT, EMBEDDING_BATCH_SIZE
 from core.processing.local_fs.models import WorkerContext
-from core.processing.local_fs.save_strategies import save_vectors_to_redis
+from vectors.save_strategies.save_milvus import save_vectors_to_milvus
+from vectors.save_strategies.save_redis import save_vectors_to_redis
 from core.processing.p_models import ParagraphData, ParagraphVectorData
 from core.processing.p_utils import (
     jsonl_reader,
@@ -163,23 +164,27 @@ async def process_file_paragraphs(
                 for p_vec in p_vecs:
                     f.write(json.dumps(p_vec.model_dump()) + "\n")
 
-        case "redis":
-            assert ctx.repo_redis is not None
+        case "redis" | "milvus":
+            if SAVE_STRATEGY == "redis":
+                assert ctx.repo_redis is not None
+                save_func = save_vectors_to_redis
+            else:  # milvus
+                assert ctx.repo_milvus is not None
+                save_func = save_vectors_to_milvus
+
             try:
-                save_vectors_to_redis(ctx, file, p_vecs)
+                save_func(ctx, file, p_vecs)
             except Exception as e:
-                error_message = f"Error occurred when saving vectors to redis: {str(e)}"
+                error_message = f"Error occurred when saving vectors to {SAVE_STRATEGY}: {str(e)}"
                 error(error_message)
                 TeleWProcessor(
-                    proc_strategy="local_fs",
+                    proc_strategy=SAVE_STRATEGY,
                     event="process_paragraphs_done",
                     status=TeleItemStatus.FAILURE,
                     user_id=file.user_id,
                     file_name=file.file_name,
                     file_name_orig=file.file_name_orig,
-                    attributes={
-                        "stats": stats
-                    },
+                    attributes={"stats": stats},
                     error_message=error_message,
                 ).write(ctx.tele)
                 raise Exception(error_message)
@@ -187,9 +192,8 @@ async def process_file_paragraphs(
         case _:
             raise Exception(f"Unexpected save strategy: {SAVE_STRATEGY}")
 
-
     TeleWProcessor(
-        proc_strategy="local_fs",
+        proc_strategy=SAVE_STRATEGY,
         event="process_paragraphs_done",
         status=TeleItemStatus.INFO,
         user_id=file.user_id,

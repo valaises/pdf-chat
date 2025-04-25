@@ -2,7 +2,7 @@ import asyncio
 
 import uvloop
 
-from core.globals import BASE_DIR, FILES_DIR
+from core.globals import BASE_DIR, FILES_DIR, SAVE_STRATEGY, PROCESSING_STRATEGY
 from core.logger import init_logger, info
 from core.app import App
 from core.repositories.repo_files import FilesRepository
@@ -11,6 +11,8 @@ from core.server import Server, setup_signal_handlers
 from core.workers.w_extractor import spawn_worker as spawn_worker_doc_extractor
 from core.workers.w_processor import spawn_worker as spawn_worker_doc_processor
 from core.workers.w_watchdog import spawn_worker as spawn_worker_watchdog
+from vectors.repositories.repo_milvus import MilvusRepository
+from vectors.repositories.repo_redis import RedisRepository
 
 
 def main():
@@ -21,13 +23,29 @@ def main():
     db_dir.mkdir(parents=True, exist_ok=True)
 
     files_repository = FilesRepository(db_dir / "files.db")
+    redis_repository = None
+    milvus_repository = None
+
+    if PROCESSING_STRATEGY == "local_fs" and SAVE_STRATEGY == "redis":
+        redis_repository = RedisRepository()
+        redis_repository.connect()
+
+    elif PROCESSING_STRATEGY == "local_fs" and SAVE_STRATEGY == "milvus":
+        milvus_repository = MilvusRepository(db_dir / "milvus.db")
 
     watchdog_worker = spawn_worker_watchdog(FILES_DIR, files_repository)
     doc_e_worker = spawn_worker_doc_extractor(files_repository)
-    doc_p_worker = spawn_worker_doc_processor(files_repository)
+    doc_p_worker = spawn_worker_doc_processor(
+        files_repository=files_repository,
+        redis_repository=redis_repository,
+        milvus_repository=milvus_repository,
+    )
 
     app = App(
         files_repository,
+        redis_repository,
+        milvus_repository,
+
         docs_url=None,
         redoc_url=None,
         openapi_url="/v1/openapi.json",

@@ -1,5 +1,6 @@
 import asyncio
 import threading
+from typing import Optional
 
 from openai import OpenAI
 
@@ -11,7 +12,8 @@ from core.processing.p_utils import (
     reset_stuck_files, get_files_to_process
 )
 from core.repositories.repo_files import FilesRepository
-from core.repositories.repo_redis import RedisRepository
+from vectors.repositories.repo_milvus import MilvusRepository
+from vectors.repositories.repo_redis import RedisRepository
 from telemetry.models import (
     TelemetryScope
 )
@@ -21,23 +23,21 @@ from telemetry.tele_writer import TeleWriter
 def p_local_fs_worker(
         stop_event: threading.Event,
         files_repository: FilesRepository,
+        redis_repository: Optional[RedisRepository] = None,
+        milvus_repository: Optional[MilvusRepository] = None,
 ) -> None:
     info("LOCAL_FS_WORKER: Starting...")
     client = OpenAI()
     loop = asyncio.new_event_loop()
     tele = TeleWriter(TelemetryScope.W_PROCESSOR)
 
-    repo_redis = None
-    if SAVE_STRATEGY == "redis":
-        repo_redis = RedisRepository()
-        repo_redis.connect()
-
     ctx = WorkerContext(
         client=client,
         loop=loop,
         tele=tele,
         files_repository=files_repository,
-        repo_redis=repo_redis,
+        repo_redis=redis_repository,
+        repo_milvus=milvus_repository,
     )
 
     reset_stuck_files(ctx.files_repository)
@@ -47,13 +47,15 @@ def p_local_fs_worker(
             process_files = get_files_to_process(ctx.files_repository)
 
             if not process_files:
-                stop_event.wait(3)
+                stop_event.wait(1)
                 continue
 
             for file in process_files:
                 process_single_file(ctx, file)
 
+            stop_event.wait(1)
+
     finally:
-        if repo_redis is not None:
-            repo_redis.close()
+        if redis_repository:
+            redis_repository.close()
         ctx.loop.close()

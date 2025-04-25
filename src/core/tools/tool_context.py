@@ -5,7 +5,8 @@ import aiohttp
 from openai import OpenAI
 
 from core.repositories.repo_files import FilesRepository
-from core.repositories.repo_redis import RedisRepository
+from vectors.repositories.repo_milvus import MilvusRepository
+from vectors.repositories.repo_redis import RedisRepository
 
 
 @dataclass
@@ -14,4 +15,6 @@ class ToolContext:
     user_id: int
     files_repository: FilesRepository
     redis_repository: Optional[RedisRepository] = None
+    milvus_repository: Optional[MilvusRepository] = None
+
     openai: Optional[OpenAI] = None

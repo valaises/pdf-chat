@@ -1,3 +1,5 @@
+from typing import Optional
+
 import aiohttp
 import openai
 
@@ -7,7 +9,8 @@ from starlette.middleware.cors import CORSMiddleware
 
 from core.globals import PROCESSING_STRATEGY, SAVE_STRATEGY
 from core.repositories.repo_files import FilesRepository
-from core.repositories.repo_redis import RedisRepository
+from vectors.repositories.repo_milvus import MilvusRepository
+from vectors.repositories.repo_redis import RedisRepository
 from core.routers.router_base import BaseRouter
 from core.routers.router_files import FilesRouter
 from core.routers.router_mcpl import MCPLRouter
@@ -20,12 +23,16 @@ class App(FastAPI):
     def __init__(
             self,
             files_repository: FilesRepository,
+            redis_repository: Optional[RedisRepository],
+            milvus_repository: Optional[MilvusRepository],
             *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
         self.http_session: aiohttp.ClientSession
         self.files_repository = files_repository
-        self.redis_repository = None
+        self.redis_repository = redis_repository
+        self.milvus_repository = milvus_repository
+
         self.openai = openai.OpenAI()
 
         self._setup_middlewares()
@@ -45,10 +52,6 @@ class App(FastAPI):
     async def _startup_events(self):
         self.http_session = aiohttp.ClientSession()
 
-        if PROCESSING_STRATEGY == "local_fs" and SAVE_STRATEGY == "redis":
-            self.redis_repository = RedisRepository()
-            self.redis_repository.connect()
-
         for router in self._routers():
             self.include_router(router)
 
@@ -66,6 +69,8 @@ class App(FastAPI):
                 self.http_session,
                 self.files_repository,
                 self.redis_repository,
+                self.milvus_repository,
+
                 self.openai,
             ),
             FilesRouter(

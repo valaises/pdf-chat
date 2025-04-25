@@ -1,6 +1,6 @@
 import time
 
-from core.logger import info, error, exception
+from core.logger import info, error, exception, warn
 from core.processing.local_fs.process_paragraphs import process_file_paragraphs
 from core.processing.local_fs.models import WorkerContext
 from core.processing.openai_fs.process_file import get_jsonl_file_path, mark_file_as_error
@@ -8,6 +8,7 @@ from core.repositories.repo_files import FileItem
 from telemetry.models import (
     TeleWProcessor, TeleItemStatus
 )
+from vectors.repositories.repo_milvus import collection_from_file_name
 
 
 def process_single_file(ctx: WorkerContext, file: FileItem) -> None:
@@ -18,7 +19,20 @@ def process_single_file(ctx: WorkerContext, file: FileItem) -> None:
     processed_paragraphs = set()
     if ctx.repo_redis is not None:
         processed_paragraphs = set(ctx.repo_redis.get_all_vector_ids(file.file_name))
-        info(f"Found {len(processed_paragraphs)} processed paragraphs in Redis")
+
+    if ctx.repo_milvus is not None:
+        col_name = collection_from_file_name(file.file_name)
+
+        collections = ctx.repo_milvus.list_collections()
+        if col_name in collections:
+            try:
+                processed_paragraphs = set(ctx.repo_milvus.get_all_vector_par_ids(
+                    collection_from_file_name(file.file_name)
+                ))
+            except Exception as e:
+                error(f"couldn't retrieve processed_paragraphs from milvus: {e}")
+
+    info(f"Found {len(processed_paragraphs)} processed paragraphs")
 
     ts_process_single_file = time.time()
 

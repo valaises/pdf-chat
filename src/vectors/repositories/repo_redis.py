@@ -1,4 +1,5 @@
 import json
+
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
@@ -23,6 +24,7 @@ class SearchResult:
     score: float
     vector: Optional[bytes] = None
     metadata: Dict[str, Any] = None
+
 
 # todo: drop redis indices of deleted documents, execute in w_cleanup
 class RedisRepository:

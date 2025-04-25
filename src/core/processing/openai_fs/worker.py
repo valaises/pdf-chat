@@ -26,7 +26,8 @@ def get_openai_resources(client: OpenAI) -> Tuple[List[Any], List[Any]]:
 
 def p_openai_fs_worker(
         stop_event: threading.Event,
-        files_repository: FilesRepository
+        files_repository: FilesRepository,
+        *_args, **_kwargs
 ) -> None:
     info("OPENAI_FS_WORKER: Starting...")
     """

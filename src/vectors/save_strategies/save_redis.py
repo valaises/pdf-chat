@@ -4,7 +4,7 @@ from typing import List
 from core.processing.local_fs.models import WorkerContext
 from core.processing.p_models import ParagraphVectorData
 from core.repositories.repo_files import FileItem
-from core.repositories.repo_redis import VectorItem
+from vectors.repositories.repo_redis import VectorItem
 
 
 def save_vectors_to_redis(
@@ -51,9 +51,8 @@ def save_vectors_to_redis(
         if pv.embedding
     ]
 
-    # Add vectors to Redis
-    if vectors:
-        ctx.repo_redis.add_vectors(index_name, vectors)
-        ctx.repo_redis.trigger_save()
-    else:
+    if not vectors:
         raise Exception(f"No vectors to save for file: {file.file_name}")
+
+    ctx.repo_redis.add_vectors(index_name, vectors)
+    ctx.repo_redis.trigger_save()

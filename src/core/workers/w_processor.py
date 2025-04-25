@@ -1,14 +1,19 @@
 import threading
+from typing import Optional
 
 from core.globals import PROCESSING_STRATEGY
 from core.processing.openai_fs.worker import p_openai_fs_worker
 from core.processing.local_fs.worker import p_local_fs_worker
 from core.repositories.repo_files import FilesRepository
 from core.workers.w_abstract import Worker
+from vectors.repositories.repo_milvus import MilvusRepository
+from vectors.repositories.repo_redis import RedisRepository
 
 
 def spawn_worker(
         files_repository: FilesRepository,
+        redis_repository: Optional[RedisRepository] = None,
+        milvus_repository: Optional[MilvusRepository] = None,
 ) -> Worker:
     stop_event = threading.Event()
 
@@ -21,7 +26,12 @@ def spawn_worker(
 
     worker_thread = threading.Thread(
         target=worker,
-        args=(stop_event, files_repository),
+        args=(
+            stop_event,
+            files_repository,
+            redis_repository,
+            milvus_repository,
+        ),
         daemon=True
     )
     worker_thread.start()

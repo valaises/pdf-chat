@@ -1,9 +1,8 @@
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Optional, Iterable, List
+from typing import Optional, Iterable, List, Iterator
 
 import numpy as np
-from attr.validators import max_len
 from pymilvus import MilvusClient, DataType
 
 from core.logger import info
@@ -19,6 +18,20 @@ class VectorItem:
     idx: Optional[int] = None
     page_n: Optional[int] = None
     paragraph_box: Optional[Iterable[float]] = None
+
+
+@dataclass
+class SearchResult:
+    id: int
+    distance: float
+    par_id: str
+    text: str
+    file_name: str
+    file_name_orig: Optional[str] = None
+    idx: Optional[int] = None
+    page_n: Optional[int] = None
+    paragraph_box: Optional[Iterable[float]] = None
+
 
 
 def collection_from_file_name(file_name: str) -> str:
@@ -116,22 +129,33 @@ class MilvusRepository:
         return res
 
 
-# 20250425 22:27:56 INFO [tool_search_in_file.py] data: [[{'id': 457603820466995200, 'distance': 0.2852153778076172, 'entity': {}}, {'id': 457603820466995208, 'distance': 0.27009016275405884, 'entity': {}}, {'id': 457603820466995209, 'distance': 0.2664899230003357, 'entity': {}}, {'id': 457603820466995212, 'distance': 0.26372087001800537, 'entity': {}}, {'id': 457603820466995201, 'distance': 0.2594161331653595, 'entity': {}}, {'id': 457603820466995225, 'distance': 0.24488821625709534, 'entity': {}}, {'id': 457603820466995202, 'distance': 0.23966240882873535, 'entity': {}}, {'id': 457603820466995210, 'distance': 0.2368156462907791, 'entity': {}}, {'id': 457603820466995221, 'distance': 0.22938737273216248, 'entity': {}}, {'id': 457603820466995205, 'distance': 0.22894889116287231, 'entity': {}}]]
-# todo: specify output fields
     def search(
             self,
             collection_name: str,
             vector: np.array,
             limit: int = 10,
             filter: str = ""
-    ):
-        return self._client.search(
+    ) -> Iterator[SearchResult]:
+        results = self._client.search(
             collection_name=collection_name,
             anns_field="vector",
             data=[vector],
             filter=filter,
             limit=limit,
+            output_fields=["par_id", "text", "file_name", "file_name_orig", "idx", "page_n", "paragraph_box"]
         )
+        for r in results[0]:
+            yield SearchResult(
+                id=r["id"],
+                distance=r["distance"],
+                par_id=r["entity"]["par_id"],
+                text=r["entity"]["text"],
+                file_name=r["entity"]["file_name"],
+                file_name_orig=r["entity"].get("file_name_orig"),
+                idx=r["entity"].get("idx"),
+                page_n=r["entity"].get("page_n"),
+                paragraph_box=r["entity"].get("paragraph_box")
+            )
 
     def get_all_vector_par_ids(self, collection_name: str) -> List[str]:
         # todo use cursor for pagination for large collections

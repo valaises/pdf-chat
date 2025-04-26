@@ -1,32 +1,18 @@
 import json
-import time
-import asyncio
 
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Optional
 
-import numpy as np
-import openai
-
-from core.globals import PROCESSING_STRATEGY, SAVE_STRATEGY
-from core.logger import warn, error, info
-from core.processing.p_utils import generate_paragraph_id
+from core.logger import warn
 from core.repositories.repo_files import FileItem
 from core.tools.tool_context import ToolContext
 from core.tools.tool_utils import build_tool_call
-from openai_wrappers.api_embeddings import async_create_embeddings
-from openai_wrappers.api_vector_store import VectorStoreSearch, vector_store_search
 from chat_tools.tool_usage.tool_abstract import Tool, ToolProps
-from openai_wrappers.types import (
-    ToolCall, ChatMessage,
-    ChatMessageContentItemDocSearch, ChatMessageTool
-)
+from openai_wrappers.types import ToolCall, ChatMessage
 from chat_tools.chat_models import (ChatTool,
     ChatToolFunction, ChatToolParameters,
     ChatToolParameterProperty
 )
-
-from vectors.repositories.repo_milvus import MilvusRepository, collection_from_file_name
-from vectors.repositories.repo_redis import RedisRepository
+from vectors.search.search import vector_search_chat_messages
 
 
 SYSTEM = """TOOL: search_in_doc
@@ -56,222 +42,6 @@ SYSTEM = """TOOL: search_in_doc
           Sky is blue because of a phenomenon called Rayleigh scattering. [pid-12345678] Answer continues...
           Would you like me to help yo with anything else?
 """
-
-
-async def openai_fs_strat(
-        ctx, tool_name, document, query, tool_call
-) -> Tuple[bool, List[ChatMessageTool]]:
-    post = VectorStoreSearch(
-        vector_store_id=document.vector_store_id,
-        query=query
-    )
-
-    try:
-        start_time = time.time()
-        resp = await vector_store_search(ctx.http_session, post)
-        info(f"Vector store search for '{query}' took {time.time() - start_time:.3f} seconds")
-    except Exception as e:
-        err = f"Error while executing tool {tool_name}: vector store search failed: {str(e)}"
-        error(err)
-        return False, [
-            build_tool_call(
-                err, tool_call
-            )
-        ]
-
-    content = []
-    for obj in resp:
-        highlight_box = None
-        try:
-            highlight_box = json.loads(obj.attributes.get("paragraph_box", json.dumps(None)))
-        except Exception:
-            pass
-        page_n = None
-        try:
-            page_n = int(obj.attributes.get("page_n", None))
-        except Exception:
-            pass
-
-        section_name = obj.attributes.get("section_number")
-
-        for content_i in obj.content:
-            paragraph_id = obj.attributes.get("paragraph_id", generate_paragraph_id(content_i.text))
-
-            content.append(ChatMessageContentItemDocSearch(
-                paragraph_id=paragraph_id,
-                text=content_i.text,
-                type="doc_search",
-                highlight_box=highlight_box,
-                page_n=page_n,
-                section_name=section_name,
-            ))
-
-    if not content:
-        return True, [
-            build_tool_call(
-                f"Executed tool {tool_name}: no results found for query '{query}'",
-                tool_call
-            )
-        ]
-
-    return True, [
-        build_tool_call(
-            content, tool_call
-        )
-    ]
-
-
-async def create_query_embedding(openai_client: openai.OpenAI, query: str, timeout: float = 5.0) -> Tuple[
-    bool, Any, Optional[str]]:
-    """
-    Create embedding for a search query.
-
-    Args:
-        openai_client: The OpenAI client instance
-        query: The search query text
-        timeout: Maximum time to wait for embedding creation
-
-    Returns:
-        Tuple containing:
-        - Success flag (bool)
-        - Embedding if successful, None otherwise
-        - Error message if failed, None otherwise
-    """
-    loop = asyncio.get_running_loop()
-    t0 = loop.time()
-
-    try:
-        res = await asyncio.wait_for(
-            async_create_embeddings(openai_client, [query]),
-            timeout=timeout
-        )
-        embedding = res.data[0].embedding
-        assert embedding is not None, "Embedding is empty"
-        info(f"retrieved embedding in {loop.time() - t0:.2f}s")
-        return True, embedding, None
-    except Exception as e:
-        err = f"Failed to fetch embeddings: {str(e)}"
-        return False, None, err
-
-
-# todo: add telemetry
-async def local_fs_redis_strat(
-        openai_client: openai.OpenAI,
-        redis_repo: RedisRepository,
-        tool_name: str,
-        document: FileItem,
-        query: str,
-        tool_call: ToolCall,
-):
-    success, embedding, err = await create_query_embedding(openai_client, query)
-    if not success:
-        return False, [
-            build_tool_call(
-                f"Error executing tool {tool_name}: {err}", tool_call
-            )
-        ]
-
-    loop = asyncio.get_running_loop()
-    t0 = loop.time()
-    search_results = redis_repo.search_vectors(document.file_name, embedding, 10)
-    info(f"vector search resolved in {loop.time() - t0:2f}s")
-
-    content = []
-    for s in search_results:
-        content.append(ChatMessageContentItemDocSearch(
-            paragraph_id=s.metadata["id"],
-            text=s.metadata["text"],
-            type="doc_search",
-            highlight_box=s.metadata["paragraph_box"],
-            page_n=int(s.metadata["page_n"]),
-        ))
-
-    if not content:
-        return True, [
-            build_tool_call(
-                f"Executed tool {tool_name}: no results found for query '{query}'",
-                tool_call
-            )
-        ]
-
-    return True, [
-        build_tool_call(
-            content, tool_call
-        )
-    ]
-
-
-async def local_fs_milvus_strat(
-        openai_client: openai.OpenAI,
-        milvus_repo: MilvusRepository,
-        tool_name: str,
-        document: FileItem,
-        query: str,
-        tool_call: ToolCall,
-):
-    success, embedding, err = await create_query_embedding(openai_client, query)
-    if not success:
-        return False, [
-            build_tool_call(
-                f"Error executing tool {tool_name}: {err}", tool_call
-            )
-        ]
-
-    loop = asyncio.get_running_loop()
-    t0 = loop.time()
-    search_results = milvus_repo.search(
-        collection_from_file_name(document.file_name),
-        np.array(embedding)
-    )
-    info(search_results)
-    info(f"vector search resolved in {loop.time() - t0:2f}s")
-
-    raise NotImplementedError("not implemented")
-
-
-async def get_content_based_on_processing_and_save_strats(
-        ctx: ToolContext,
-        tool_name: str,
-        document: FileItem,
-        query: str,
-        tool_call: ToolCall,
-) -> Tuple[bool, List[ChatMessageTool]]:
-    if PROCESSING_STRATEGY == "openai_fs":
-        return await openai_fs_strat(
-            ctx, tool_name, document, query, tool_call
-        )
-
-    elif PROCESSING_STRATEGY == "local_fs":
-        if SAVE_STRATEGY == "local":
-            raise ValueError("Local FS processing strategy is not supported yet")
-
-        elif SAVE_STRATEGY == "redis":
-            assert ctx.redis_repository is not None, "Redis repository is not initialized"
-            redis_repo: RedisRepository = ctx.redis_repository
-
-            assert ctx.openai is not None, "OpenAI client is not initialized"
-            openai_client: openai.OpenAI = ctx.openai
-
-            return await local_fs_redis_strat(
-                openai_client, redis_repo, tool_name, document, query, tool_call
-            )
-
-        elif SAVE_STRATEGY == "milvus":
-            assert ctx.milvus_repository is not None, "Milvus repository is not initialized"
-            milvus_repo: MilvusRepository = ctx.milvus_repository
-
-            assert ctx.openai is not None, "OpenAI client is not initialized"
-            openai_client: openai.OpenAI = ctx.openai
-
-            return await local_fs_milvus_strat(
-                openai_client, milvus_repo, tool_name, document, query, tool_call
-            )
-
-        else:
-            raise ValueError(f"Unknown save strategy: {SAVE_STRATEGY}")
-
-    else:
-        raise ValueError(f"Unknown processing strategy: {PROCESSING_STRATEGY}")
 
 
 class ToolSearchInFile(Tool):
@@ -356,8 +126,7 @@ class ToolSearchInFile(Tool):
                 )
             ]
 
-        res = await get_content_based_on_processing_and_save_strats(ctx, self.name, document, query, tool_call)
-        return res
+        return await vector_search_chat_messages(ctx, self.name, document, query, tool_call)
 
     def as_chat_tool(self) -> ChatTool:
         return ChatTool(

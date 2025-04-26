@@ -2,10 +2,8 @@ import json
 
 from typing import Dict, Any, List
 
-from core.tools.tool_utils import build_tool_call
-from openai_wrappers.types import ToolCall, ChatMessage
-from chat_tools.chat_models import ChatTool, ChatToolFunction, ChatToolParameters
-from chat_tools.tool_usage.tool_abstract import Tool, ToolProps
+from core.tools.tool_abstract import build_tool_call, Tool
+from openai_wrappers.types import ToolCall, ChatMessage, ChatTool, ChatToolFunction, ChatToolParameters
 
 from core.tools.tool_context import ToolContext
 
@@ -72,12 +70,14 @@ class ToolListFiles(Tool):
 
             return True, [
                 build_tool_call(
-                    json.dumps([{
-                        "file_name": f.file_name_orig,
-                        "processing_status": f.processing_status,
-                        "available_filters": ["section_name"]
-                    }
-                        for f in files], indent=2),
+                    json.dumps([
+                        {
+                            "file_name": f.file_name_orig,
+                            "processing_status": f.processing_status,
+                            "available_filters": ["section_name"]
+                        }
+                        for f in files
+                    ], indent=2),
                     tool_call
                 )
             ]

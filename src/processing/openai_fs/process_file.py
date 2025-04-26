@@ -4,9 +4,9 @@ from typing import Any, List
 
 from core.globals import FILES_DIR
 from core.logger import info, error, exception
-from core.processing.openai_fs.process_paragraphs import process_file_paragraphs
-from core.processing.p_models import WorkerContext
-from core.processing.p_utils import generate_vector_store_file_name
+from processing.openai_fs.process_paragraphs import process_file_paragraphs
+from processing.p_models import WorkerContext
+from processing.p_utils import generate_vector_store_file_name
 from core.repositories.repo_files import FileItem, FilesRepository
 from telemetry.models import TeleWProcessor, TeleItemStatus
 from openai_wrappers.api_vector_store import VectorStoreCreate, vector_store_create, vector_store_files_list, \
@@ -67,6 +67,7 @@ def process_single_file(
     """Process a single file through the entire pipeline."""
     info(f"Processing file: {file.file_name_orig} STATUS={file.processing_status}")
     file.processing_status = "processing"
+    ctx.files_repository.update_file_sync(file.file_name, file)
 
     ts_process_single_file = time.time()
 

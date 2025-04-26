@@ -7,7 +7,7 @@ from core.globals import FILES_DIR
 from core.logger import info
 from core.repositories.repo_files import FilesRepository
 from core.workers.w_abstract import Worker
-from coxit.extractor.file_reader import FileReader
+from extraction.pdf_extractor.file_reader import FileReader
 
 
 VISUALIZE = False

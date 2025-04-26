@@ -1,22 +1,16 @@
 import json
-import time
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
-from core.logger import warn, error, info
-from core.processing.p_utils import generate_paragraph_id
+from core.logger import warn
+from core.repositories.repo_files import FileItem
+from core.tools.tool_abstract import build_tool_call, Tool, ToolProps
 from core.tools.tool_context import ToolContext
-from core.tools.tool_utils import build_tool_call
-from openai_wrappers.api_vector_store import VectorStoreSearch, vector_store_search
-from chat_tools.tool_usage.tool_abstract import Tool, ToolProps
+from openai_wrappers.types import ToolCall, ChatMessage
 from openai_wrappers.types import (
-    ToolCall, ChatMessage,
-    ChatMessageContentItemDocSearch
+    ChatTool, ChatToolFunction, ChatToolParameters, ChatToolParameterProperty
 )
-from chat_tools.chat_models import (ChatTool,
-    ChatToolFunction, ChatToolParameters,
-    ChatToolParameterProperty
-)
+from vectors.search.search import vector_search_chat_messages
 
 
 SYSTEM = """TOOL: search_in_doc
@@ -120,7 +114,7 @@ class ToolSearchInFile(Tool):
                 )
             ]
 
-        document = next((f for f in files if f.file_name_orig == document_name), None)
+        document: Optional[FileItem] = next((f for f in files if f.file_name_orig == document_name), None)
         if not document:
             return False, [
                 build_tool_call(
@@ -130,63 +124,7 @@ class ToolSearchInFile(Tool):
                 )
             ]
 
-        post = VectorStoreSearch(
-            vector_store_id=document.vector_store_id,
-            query=query
-        )
-
-        try:
-            start_time = time.time()
-            resp = await vector_store_search(ctx.http_session, post)
-            info(f"Vector store search for '{query}' took {time.time() - start_time:.3f} seconds")
-        except Exception as e:
-            err = f"Error while executing tool {self.name}: vector store search failed: {str(e)}"
-            error(err)
-            return False, [
-                build_tool_call(
-                    err, tool_call
-                )
-            ]
-
-        content = []
-        for obj in resp:
-            highlight_box = None
-            try:
-                highlight_box = json.loads(obj.attributes.get("paragraph_box", json.dumps(None)))
-            except Exception:
-                pass
-            page_n = None
-            try:
-                page_n = int(obj.attributes.get("page_n", None))
-            except Exception:
-                pass
-
-            section_name = obj.attributes.get("section_number")
-
-            for content_i in obj.content:
-                paragraph_id = obj.attributes.get("paragraph_id", generate_paragraph_id(content_i.text))
-
-                content.append(ChatMessageContentItemDocSearch(
-                    paragraph_id=paragraph_id,
-                    text=content_i.text,
-                    type="doc_search",
-                    highlight_box=highlight_box,
-                    page_n=page_n,
-                    section_name=section_name,
-                ))
-
-        if not content:
-            return True, [
-                build_tool_call(
-                    f"No results found for the query: {query}.",
-                    tool_call
-                )
-            ]
-        return True, [
-            build_tool_call(
-                content, tool_call
-            )
-        ]
+        return await vector_search_chat_messages(ctx, self.name, document, query, tool_call)
 
     def as_chat_tool(self) -> ChatTool:
         return ChatTool(

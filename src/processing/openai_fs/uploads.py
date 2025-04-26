@@ -3,8 +3,8 @@ from typing import List, Tuple, Any
 import ujson as json
 
 from core.logger import info
-from core.processing.p_models import WorkerContext, ParagraphData
-from core.processing.p_utils import generate_paragraph_id
+from processing.p_models import WorkerContext, ParagraphData
+from processing.p_utils import generate_paragraph_id
 from openai_wrappers.api_files import async_file_upload, FileUpload
 from openai_wrappers.api_vector_store import async_vector_store_file_create, VectorStoreFileCreate
 

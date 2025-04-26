@@ -1,13 +1,11 @@
 import json
+
 from typing import List
 
-from chat_tools import ChatTool
-from chat_tools.tool_usage.tool_abstract import Tool, ToolProps
-
-from core.tools.tool_utils import build_tool_call
 from openai_wrappers.utils import messages_since_last_user_message, get_unanswered_tool_calls
-from openai_wrappers.types import ChatMessage, ChatMessageTool
+from openai_wrappers.types import ChatMessage, ChatMessageTool, ChatTool
 
+from core.tools.tool_abstract import build_tool_call, Tool, ToolProps
 from core.tools.tool_context import ToolContext
 from core.tools.tool_list_files import ToolListFiles
 from core.tools.tool_search_in_file import ToolSearchInFile

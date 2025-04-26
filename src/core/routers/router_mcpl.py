@@ -1,21 +1,19 @@
 from typing import List, Optional
 
-from chat_tools.tool_usage import ToolProps
 from fastapi import APIRouter, status
 from openai import OpenAI
 from pydantic import BaseModel
 
 import aiohttp
 
-from chat_tools.chat_models import ChatTool
-
 from core.repositories.repo_files import FilesRepository
 from core.routers.schemas import  error_constructor, ErrorResponse
+from core.tools.tool_abstract import ToolProps
 from core.tools.tool_context import ToolContext
 from core.tools.tools import get_tools_list, execute_tools, get_tool_props
 from vectors.repositories.repo_milvus import MilvusRepository
 from vectors.repositories.repo_redis import RedisRepository
-from openai_wrappers.types import ChatMessage
+from openai_wrappers.types import ChatMessage, ChatTool
 
 
 class ToolsExecutePost(BaseModel):

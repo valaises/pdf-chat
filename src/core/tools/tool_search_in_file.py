@@ -4,13 +4,11 @@ from typing import Dict, Any, List, Optional
 
 from core.logger import warn
 from core.repositories.repo_files import FileItem
+from core.tools.tool_abstract import build_tool_call, Tool, ToolProps
 from core.tools.tool_context import ToolContext
-from core.tools.tool_utils import build_tool_call
-from chat_tools.tool_usage.tool_abstract import Tool, ToolProps
 from openai_wrappers.types import ToolCall, ChatMessage
-from chat_tools.chat_models import (ChatTool,
-    ChatToolFunction, ChatToolParameters,
-    ChatToolParameterProperty
+from openai_wrappers.types import (
+    ChatTool, ChatToolFunction, ChatToolParameters, ChatToolParameterProperty
 )
 from vectors.search.search import vector_search_chat_messages
 

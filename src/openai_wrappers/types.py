@@ -1,9 +1,34 @@
-from typing import Union, List, Optional, Any, Literal
+from typing import Union, List, Optional, Any, Literal, Dict
 
 from pydantic import BaseModel
 
 
 type ChatMessage = Union[ChatMessageSystem, ChatMessageUser, ChatMessageAssistant, ChatMessageTool]
+
+
+class ChatToolParameterProperty(BaseModel):
+    type: str
+    description: str
+    enum: List[str] = None
+
+
+class ChatToolParameters(BaseModel):
+    type: str
+    properties: Dict[str, ChatToolParameterProperty]
+    required: List[str]
+    additionalProperties: bool = False
+
+
+class ChatToolFunction(BaseModel):
+    name: str
+    description: str
+    parameters: ChatToolParameters
+    strict: bool = True
+
+
+class ChatTool(BaseModel):
+    type: str
+    function: ChatToolFunction
 
 
 class ChatMessageContentItemDocSearch(BaseModel):

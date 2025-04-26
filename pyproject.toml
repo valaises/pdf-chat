@@ -16,7 +16,6 @@ requires-python = ">=3.12"
 dependencies = [
     "aiofiles>=24.1.0",
     "aiohttp>=3.11.14",
-    "chat-tools",
     "fastapi>=0.115.11",
     "more-itertools>=10.6.0",
     "numba>=0.61.2",
@@ -53,5 +52,3 @@ openai_wrappers = { workspace = true }
 processing = { workspace = true }
 telemetry = { workspace = true }
 vectors = { workspace = true }
-
-chat-tools = { git = "https://github.com/valaises/chat_tools.git" }

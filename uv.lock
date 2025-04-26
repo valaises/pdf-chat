@@ -5,8 +5,9 @@ requires-python = ">=3.12"
 members = [
     "chat-with-pdf-poc",
     "core",
-    "coxit",
+    "extraction",
     "openai-wrappers",
+    "processing",
     "telemetry",
     "vectors",
 ]
@@ -165,21 +166,12 @@ wheels = [
 ]
 
 [[package]]
-name = "chat-tools"
-version = "0.1.0"
-source = { git = "https://github.com/valaises/chat_tools.git#ce56cd686db84dec14bd61cacbb9dd0b2ff8646f" }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[[package]]
 name = "chat-with-pdf-poc"
 version = "0.1.1a0"
 source = { virtual = "." }
 dependencies = [
     { name = "aiofiles" },
     { name = "aiohttp" },
-    { name = "chat-tools" },
     { name = "fastapi" },
     { name = "more-itertools" },
     { name = "numba" },
@@ -203,7 +195,6 @@ dependencies = [
 requires-dist = [
     { name = "aiofiles", specifier = ">=24.1.0" },
     { name = "aiohttp", specifier = ">=3.11.14" },
-    { name = "chat-tools", git = "https://github.com/valaises/chat_tools.git" },
     { name = "fastapi", specifier = ">=0.115.11" },
     { name = "more-itertools", specifier = ">=10.6.0" },
     { name = "numba", specifier = ">=0.61.2" },
@@ -250,11 +241,6 @@ version = "0.1.0"
 source = { virtual = "src/core" }
 
 [[package]]
-name = "coxit"
-version = "0.1.0"
-source = { virtual = "src/coxit" }
-
-[[package]]
 name = "distro"
 version = "1.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -262,6 +248,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527
 wheels = [
     { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277 },
 ]
+
+[[package]]
+name = "extraction"
+version = "0.1.0"
+source = { virtual = "src/extraction" }
 
 [[package]]
 name = "fastapi"
@@ -635,6 +626,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/57/0f72a10f9db6a4628744c8e8f0df4e6e21de01212c7c981d31e50ffc8328/pandas-2.2.3-cp313-cp313t-musllinux_1_2_aarch64.whl", hash = "sha256:15c0e1e02e93116177d29ff83e8b1619c93ddc9c49083f237d4312337a61165d", size = 15711620 },
     { url = "https://files.pythonhosted.org/packages/ab/5f/b38085618b950b79d2d9164a711c52b10aefc0ae6833b96f626b7021b2ed/pandas-2.2.3-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:ad5b65698ab28ed8d7f18790a0dc58005c7629f227be9ecc1072aa74c0c1d43a", size = 13098436 },
 ]
+
+[[package]]
+name = "processing"
+version = "0.1.0"
+source = { virtual = "src/processing" }
 
 [[package]]
 name = "propcache"

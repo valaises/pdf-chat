@@ -5,8 +5,8 @@ import openai
 
 from core.globals import PROCESSING_STRATEGY, SAVE_STRATEGY
 from core.repositories.repo_files import FileItem
+from core.tools.tool_abstract import build_tool_call
 from core.tools.tool_context import ToolContext
-from core.tools.tool_utils import build_tool_call
 from openai_wrappers.types import ToolCall, ChatMessageTool
 
 from vectors.repositories.repo_milvus import MilvusRepository

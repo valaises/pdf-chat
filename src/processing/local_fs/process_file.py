@@ -1,9 +1,9 @@
 import time
 
-from core.logger import info, error, exception, warn
-from core.processing.local_fs.process_paragraphs import process_file_paragraphs
-from core.processing.local_fs.models import WorkerContext
-from core.processing.openai_fs.process_file import get_jsonl_file_path, mark_file_as_error
+from core.logger import info, error, exception
+from processing.local_fs.process_paragraphs import process_file_paragraphs
+from processing.local_fs.models import WorkerContext
+from processing.openai_fs.process_file import get_jsonl_file_path, mark_file_as_error
 from core.repositories.repo_files import FileItem
 from telemetry.models import (
     TeleWProcessor, TeleItemStatus

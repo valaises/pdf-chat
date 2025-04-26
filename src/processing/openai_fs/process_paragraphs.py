@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 from core.logger import error
-from core.processing.openai_fs.const import SEMAPHORE_LIMIT
-from core.processing.openai_fs.uploads import upload_paragraph_if_needed, add_to_vector_store_if_needed
-from core.processing.p_models import WorkerContext, ParagraphData
-from core.processing.p_utils import generate_hashed_filename, jsonl_reader, try_aggr_requests_stats
+from processing.openai_fs.const import SEMAPHORE_LIMIT
+from processing.openai_fs.uploads import upload_paragraph_if_needed, add_to_vector_store_if_needed
+from processing.p_models import WorkerContext, ParagraphData
+from processing.p_utils import generate_hashed_filename, jsonl_reader, try_aggr_requests_stats
 from core.repositories.repo_files import FileItem
 from telemetry.models import RequestResult, RequestStatus, TeleWProcessor, TeleItemStatus
 

@@ -33,10 +33,7 @@ async def vector_search_chat_messages(
         )
 
     elif PROCESSING_STRATEGY == "local_fs":
-        if SAVE_STRATEGY == "local":
-            raise ValueError("Local FS processing strategy is not supported yet")
-
-        elif SAVE_STRATEGY == "redis":
+        if SAVE_STRATEGY == "redis":
             assert ctx.redis_repository is not None, "Redis repository is not initialized"
             redis_repo: RedisRepository = ctx.redis_repository
 

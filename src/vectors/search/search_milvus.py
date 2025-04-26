@@ -12,7 +12,6 @@ from vectors.repositories.repo_milvus import MilvusRepository, collection_from_f
 from vectors.search.search_utils import create_query_embedding
 
 
-# todo: complete
 async def search_milvus(
         loop: asyncio.BaseEventLoop,
         openai_client: openai.OpenAI,

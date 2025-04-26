@@ -2,8 +2,8 @@ import threading
 from typing import Optional
 
 from core.globals import PROCESSING_STRATEGY
-from core.processing.openai_fs.worker import p_openai_fs_worker
-from core.processing.local_fs.worker import p_local_fs_worker
+from processing.openai_fs.worker import p_openai_fs_worker
+from processing.local_fs.worker import p_local_fs_worker
 from core.repositories.repo_files import FilesRepository
 from core.workers.w_abstract import Worker
 from vectors.repositories.repo_milvus import MilvusRepository

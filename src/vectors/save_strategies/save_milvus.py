@@ -3,8 +3,8 @@ from typing import List
 import numpy as np
 from more_itertools.more import chunked
 
-from core.processing.local_fs.models import WorkerContext
-from core.processing.p_models import ParagraphVectorData
+from processing.local_fs.models import WorkerContext
+from processing.p_models import ParagraphVectorData
 from core.repositories.repo_files import FileItem
 from vectors.repositories.repo_milvus import VectorItem, collection_from_file_name
 

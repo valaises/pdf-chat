@@ -7,9 +7,9 @@ from typing import List, Tuple, Any
 from openai import OpenAI
 
 from core.logger import error, info
-from core.processing.openai_fs.process_file import process_single_file
-from core.processing.p_models import WorkerContext
-from core.processing.p_utils import get_files_to_process, reset_stuck_files
+from processing.openai_fs.process_file import process_single_file
+from processing.p_models import WorkerContext
+from processing.p_utils import get_files_to_process, reset_stuck_files
 from core.repositories.repo_files import FilesRepository
 from openai_wrappers.api_files import files_list
 from openai_wrappers.api_vector_store import vector_stores_list

@@ -2,17 +2,16 @@ import asyncio
 from pathlib import Path
 from typing import List, Tuple, Set
 
-import ujson as json
 from more_itertools import chunked
 
 from core.globals import SAVE_STRATEGY
 from core.logger import error
-from core.processing.local_fs.const import SEMAPHORE_LIMIT, EMBEDDING_BATCH_SIZE
-from core.processing.local_fs.models import WorkerContext
+from processing.local_fs.const import SEMAPHORE_LIMIT, EMBEDDING_BATCH_SIZE
+from processing.local_fs.models import WorkerContext
 from vectors.save_strategies.save_milvus import save_vectors_to_milvus
 from vectors.save_strategies.save_redis import save_vectors_to_redis
-from core.processing.p_models import ParagraphData, ParagraphVectorData
-from core.processing.p_utils import (
+from processing.p_models import ParagraphData, ParagraphVectorData
+from processing.p_utils import (
     jsonl_reader,
     generate_paragraph_id, try_aggr_requests_stats
 )
@@ -158,12 +157,6 @@ async def process_file_paragraphs(
 
     # todo: add save_strategy time -t0 into telemetry
     match SAVE_STRATEGY:
-        case "local":
-            # todo: change to "a" when ready
-            with jsonl_vec.open("w") as f:
-                for p_vec in p_vecs:
-                    f.write(json.dumps(p_vec.model_dump()) + "\n")
-
         case "redis" | "milvus":
             if SAVE_STRATEGY == "redis":
                 assert ctx.repo_redis is not None

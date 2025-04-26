@@ -72,12 +72,14 @@ class ToolListFiles(Tool):
 
             return True, [
                 build_tool_call(
-                    json.dumps([{
-                        "file_name": f.file_name_orig,
-                        "processing_status": f.processing_status,
-                        "available_filters": ["section_name"]
-                    }
-                        for f in files], indent=2),
+                    json.dumps([
+                        {
+                            "file_name": f.file_name_orig,
+                            "processing_status": f.processing_status,
+                            "available_filters": ["section_name"]
+                        }
+                        for f in files
+                    ], indent=2),
                     tool_call
                 )
             ]

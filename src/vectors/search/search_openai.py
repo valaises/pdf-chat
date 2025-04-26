@@ -6,7 +6,7 @@ from typing import List
 from aiohttp import ClientSession
 
 from core.logger import info
-from core.processing.p_utils import generate_paragraph_id
+from processing.p_utils import generate_paragraph_id
 from core.repositories.repo_files import FileItem
 from openai_wrappers.api_vector_store import VectorStoreSearch, vector_store_search
 from openai_wrappers.types import ChatMessageContentItemDocSearch

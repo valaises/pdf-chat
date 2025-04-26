@@ -39,16 +39,19 @@ dependencies = [
 [tool.uv.workspace]
 members = [
     "src/core",
-    "src/coxit",
+    "src/extraction",
     "src/openai_wrappers",
+    "src/processing",
     "src/telemetry",
     "src/vectors",
 ]
 
 [tool.uv.sources]
 core = { workspace = true }
-coxit = { workspace = true }
+extraction = { workspace = true }
 openai_wrappers = { workspace = true }
+processing = { workspace = true }
 telemetry = { workspace = true }
 vectors = { workspace = true }
+
 chat-tools = { git = "https://github.com/valaises/chat_tools.git" }

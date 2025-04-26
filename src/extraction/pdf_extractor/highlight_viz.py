@@ -6,7 +6,7 @@ from typing import List, Optional
 import pymupdf
 
 from core.globals import FILES_DIR
-from coxit.extractor.paragraph_parser import ParagraphData
+from extraction.pdf_extractor.paragraph_parser import ParagraphData
 
 
 def highlight_paragraphs_on_page(

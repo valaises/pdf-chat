@@ -4,19 +4,14 @@ from typing import Optional
 
 from openai import OpenAI
 
-from core.globals import SAVE_STRATEGY
 from core.logger import info
-from core.processing.local_fs.models import WorkerContext
-from core.processing.local_fs.process_file import process_single_file
-from core.processing.p_utils import (
-    reset_stuck_files, get_files_to_process
-)
 from core.repositories.repo_files import FilesRepository
+from processing.local_fs.models import WorkerContext
+from processing.local_fs.process_file import process_single_file
+from processing.p_utils import reset_stuck_files, get_files_to_process
 from vectors.repositories.repo_milvus import MilvusRepository
 from vectors.repositories.repo_redis import RedisRepository
-from telemetry.models import (
-    TelemetryScope
-)
+from telemetry.models import TelemetryScope
 from telemetry.tele_writer import TeleWriter
 
 

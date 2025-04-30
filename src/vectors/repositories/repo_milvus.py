@@ -172,13 +172,15 @@ class MilvusRepository:
         """
         # First ensure the collection is loaded for search
         self._client.load_collection(collection_name)
+        stats = self._client.get_collection_stats(collection_name)
+        row_count = int(stats["row_count"])
 
         # Query all IDs from the collection
         result = self._client.query(
             collection_name=collection_name,
             filter="",  # Empty filter to get all records
             output_fields=["par_id"],
-            limit=0  # 0 means no limit, retrieve all records
+            limit=row_count
         )
 
         # Extract IDs from the result

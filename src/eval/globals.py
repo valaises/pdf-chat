@@ -1,0 +1,10 @@
+from core.globals import DB_DIR
+
+
+EVAL_USER_ID: int = 1337_000000000_8413211
+PROCESSING_STRATEGY = "local_fs"
+SAVE_STRATEGY = "milvus"
+DB_EVAL_DIR = DB_DIR / "eval"
+DB_EVAL_DIR.mkdir(parents=True, exist_ok=True)
+SEMAPHORE_LIMIT = 10
+EMBEDDING_BATCH_SIZE = 128

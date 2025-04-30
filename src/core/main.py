@@ -2,7 +2,7 @@ import asyncio
 
 import uvloop
 
-from core.globals import BASE_DIR, FILES_DIR, SAVE_STRATEGY, PROCESSING_STRATEGY
+from core.globals import BASE_DIR, FILES_DIR, SAVE_STRATEGY, PROCESSING_STRATEGY, DB_DIR
 from core.logger import init_logger, info
 from core.app import App
 from core.repositories.repo_files import FilesRepository
@@ -19,10 +19,7 @@ def main():
     init_logger(True)
     info("Logger initialized")
 
-    db_dir = BASE_DIR / "db"
-    db_dir.mkdir(parents=True, exist_ok=True)
-
-    files_repository = FilesRepository(db_dir / "files.db")
+    files_repository = FilesRepository(DB_DIR / "files.db")
     redis_repository = None
     milvus_repository = None
 
@@ -31,7 +28,7 @@ def main():
         redis_repository.connect()
 
     elif PROCESSING_STRATEGY == "local_fs" and SAVE_STRATEGY == "milvus":
-        milvus_repository = MilvusRepository(db_dir / "milvus.db")
+        milvus_repository = MilvusRepository(DB_DIR / "milvus.db")
 
     watchdog_worker = spawn_worker_watchdog(FILES_DIR, files_repository)
     doc_e_worker = spawn_worker_doc_extractor(files_repository)

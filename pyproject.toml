@@ -38,7 +38,7 @@ dependencies = [
 [tool.uv.workspace]
 members = [
     "src/core",
-    "src/eval",
+    "src/evaluation",
     "src/extraction",
     "src/openai_wrappers",
     "src/processing",
@@ -48,7 +48,7 @@ members = [
 
 [tool.uv.sources]
 core = { workspace = true }
-eval = { workspace = true }
+evaluation = { workspace = true }
 extraction = { workspace = true }
 openai_wrappers = { workspace = true }
 processing = { workspace = true }

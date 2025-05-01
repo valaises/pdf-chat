@@ -4,17 +4,14 @@ from typing import List
 from aiohttp import ClientSession
 
 from core.logger import info
-from eval.globals import CHAT_ENDPOINT_API_KEY, CHAT_ENDPOINT, CHAT_MODEL
-from openai_wrappers.types import ChatMessage, ChatMessageSystem, ChatMessageUser
+from evaluation.globals import CHAT_ENDPOINT_API_KEY, CHAT_ENDPOINT, CHAT_MODEL
+from openai_wrappers.types import ChatMessage, ChatMessageUser
 
 
 async def call_chat_completions_non_streaming(
-        http_session,
+        http_session: ClientSession,
         messages: List[ChatMessage]
 ):
-    # API endpoint
-    url = f"{CHAT_ENDPOINT}/chat/completions"
-
     # Request payload with stream=False
     payload = {
         "model": CHAT_MODEL,
@@ -29,7 +26,11 @@ async def call_chat_completions_non_streaming(
         "Authorization": f"Bearer {CHAT_ENDPOINT_API_KEY}"
     }
 
-    async with http_session.post(url, json=payload, headers=headers) as response:
+    async with http_session.post(
+            f"{CHAT_ENDPOINT}/chat/completions",
+            json=payload,
+            headers=headers
+    ) as response:
         if response.status == 200:
             # Parse the JSON response
             result = await response.json()

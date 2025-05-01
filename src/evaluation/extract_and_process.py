@@ -6,8 +6,8 @@ import openai
 from more_itertools import chunked
 from openai import OpenAI
 
-from eval.eval_utils import eval_file_path
-from eval.globals import SEMAPHORE_LIMIT, EMBEDDING_BATCH_SIZE, SAVE_STRATEGY
+from evaluation.eval_utils import eval_file_path
+from evaluation.globals import SEMAPHORE_LIMIT, EMBEDDING_BATCH_SIZE, SAVE_STRATEGY
 from core.logger import info
 from core.repositories.repo_files import FileItem
 from core.workers.w_extractor import get_file_paragraphs
@@ -133,7 +133,8 @@ def extract_and_process_files(
         info(f"FILE: {file.file_name_orig} EXTRACT: {time.time() - t0:.2f}s")
 
         t0 = time.time()
-        process_file_local(loop, client, redis_repository, milvus_repository, extracted_paragraphs, file)
+        # todo: uncomment
+        # process_file_local(loop, client, redis_repository, milvus_repository, extracted_paragraphs, file)
         info(f"FILE: {file.file_name_orig} PROCESS: {time.time() - t0:.2f}s")
 
     return file_paragraphs

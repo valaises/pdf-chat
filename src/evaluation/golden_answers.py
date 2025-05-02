@@ -11,7 +11,13 @@ from processing.p_models import ParagraphData
 from openai_wrappers.types import ChatMessage, ChatMessageUser, ChatMessageSystem
 
 
-__all__= ["produce_golden_answers"]
+__all__= ["SYSTEM", "produce_golden_answers"]
+
+
+SYSTEM = """
+You are a helpful assistant that is utmost concise, yet precise, in its responses.
+You use additional context and construct clear concise answer using that context.
+"""
 
 
 async def golden_answers_worker(
@@ -49,8 +55,7 @@ async def golden_answers_for_doc(
     init_messages = [
         ChatMessageSystem(
             role="system",
-            content="You are a helpful assistant that is utmost concise, yet precise, in its responses."
-                    "You use additional context provided by a user and construct clear concise answer using that context."
+            content=SYSTEM,
         ),
         ChatMessageUser(role="user", content=doc_text),
     ]

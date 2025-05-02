@@ -1,19 +1,21 @@
 import asyncio
 import uuid
 from pathlib import Path
-from typing import List, Iterator, Tuple
+from typing import List, Iterator, Tuple, Dict
 
 import aiohttp
 from openai import OpenAI
 
-from core.globals import ASSETS_DIR
+from core.globals import ASSETS_DIR, DB_DIR
 from core.logger import init_logger, info
-from core.repositories.repo_files import FileItem
+from core.repositories.repo_files import FileItem, FilesRepository
+from core.tools.tool_context import ToolContext
 from evaluation.eval import evaluate_model_outputs
 from evaluation.extract_and_process import extract_and_process_files
 from evaluation.globals import EVAL_USER_ID, PROCESSING_STRATEGY, SAVE_STRATEGY, DB_EVAL_DIR
 from evaluation.golden_answers import produce_golden_answers
 from evaluation.questions import load_combined_questions
+from evaluation.rag_answers import produce_rag_answers
 from processing.p_models import ParagraphData
 
 from vectors.repositories.repo_milvus import MilvusRepository
@@ -36,10 +38,16 @@ def main():
         FileItem(
             file_name=f"file_{uuid.uuid4().hex[:24]}",
             file_name_orig=f.name,
-            user_id=EVAL_USER_ID
+            user_id=EVAL_USER_ID,
+            processing_status="completed",
         )
         for f in eval_files
     ]
+
+    files_repository = FilesRepository(DB_DIR / "files.db")
+    files_repository.delete_user_files_sync(EVAL_USER_ID)
+    for file in eval_files:
+        assert files_repository.create_file_sync(file), f"Failed to create record of file={file} in DB"
 
     redis_repository = None
     milvus_repository = None
@@ -60,7 +68,16 @@ def main():
         ASSETS_DIR / "eval" / "questions_split.json",
     )
 
-    questions = questions[:5] # todo: for test runs only
+    questions = questions[:3] # todo: for test runs only
+
+    tool_context = ToolContext(
+        http_session=http_session,
+        user_id=EVAL_USER_ID,
+        files_repository=files_repository,
+        redis_repository=redis_repository,
+        milvus_repository=milvus_repository,
+        openai=client,
+    )
 
     try:
         file_paragraphs_dict = extract_and_process_files(
@@ -74,13 +91,23 @@ def main():
         file_paragraphs: List[Tuple[FileItem, List[ParagraphData]]] = [
             (f, file_paragraphs_dict[f.file_name_orig]) for f in eval_files
         ]
-        golden_answers = produce_golden_answers(loop, http_session, file_paragraphs, questions)
-        info(golden_answers)
+        # golden_answers = produce_golden_answers(loop, http_session, file_paragraphs, questions)
 
-        eval_results = evaluate_model_outputs(loop, http_session, questions, golden_answers)
-        info(eval_results)
+        # eval_results = evaluate_model_outputs(loop, http_session, questions, golden_answers)
+
+        rag_results = produce_rag_answers(tool_context, loop, eval_files, questions)
+        rag_answers: Dict[str, Dict[int, str]] = {
+            file_name: {
+                k: v[-1].content for k, v in fn_results.items()
+            } for file_name, fn_results in rag_results.items()
+        }
+
+        rag_results = evaluate_model_outputs(loop, http_session, questions, rag_answers)
+        info(f"{rag_results=}")
+
 
     finally:
+        files_repository.delete_user_files_sync(EVAL_USER_ID)
         loop.run_until_complete(http_session.close())
         loop.close()
 

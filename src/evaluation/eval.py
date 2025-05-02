@@ -59,6 +59,7 @@ async def evaluate_answers_for_doc(
 
     tasks = []
     for question in questions:
+        # todo: investigate KeyError
         answer = doc_answers[question.id]
 
         prompt = PROMPT.replace(
@@ -123,7 +124,7 @@ def evaluate_model_outputs(
 
     return results
 
-# todo: add case: question cannot be answered as there is no information in text
+
 PROMPT = """
 QUESTIONS: 
 %questions%

@@ -1,5 +1,5 @@
 import asyncio
-from typing import List
+from typing import List, Dict
 
 from aiohttp import ClientSession
 
@@ -10,7 +10,8 @@ from openai_wrappers.types import ChatMessage, ChatMessageUser
 
 async def call_chat_completions_non_streaming(
         http_session: ClientSession,
-        messages: List[ChatMessage]
+        messages: List[ChatMessage],
+        tools: List[Dict[str, str]] = None
 ):
     # Request payload with stream=False
     payload = {
@@ -19,6 +20,9 @@ async def call_chat_completions_non_streaming(
         "stream": False,
         "temperature": 0.7,
     }
+
+    if tools:
+        payload["tools"] = tools
 
     # Headers including authorization
     headers = {

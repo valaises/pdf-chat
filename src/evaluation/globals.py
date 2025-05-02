@@ -1,7 +1,7 @@
 from core.globals import DB_DIR
 
 
-EVAL_USER_ID: int = 1337_000000000_8413211
+EVAL_USER_ID: int = 1337_8413211
 PROCESSING_STRATEGY = "local_fs"
 SAVE_STRATEGY = "milvus"
 DB_EVAL_DIR = DB_DIR / "eval"

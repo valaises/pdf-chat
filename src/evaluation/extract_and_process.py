@@ -133,8 +133,7 @@ def extract_and_process_files(
         info(f"FILE: {file.file_name_orig} EXTRACT: {time.time() - t0:.2f}s")
 
         t0 = time.time()
-        # todo: uncomment
-        # process_file_local(loop, client, redis_repository, milvus_repository, extracted_paragraphs, file)
+        process_file_local(loop, client, redis_repository, milvus_repository, extracted_paragraphs, file)
         info(f"FILE: {file.file_name_orig} PROCESS: {time.time() - t0:.2f}s")
 
     return file_paragraphs

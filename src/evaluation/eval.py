@@ -17,8 +17,10 @@ __all__ = ["evaluate_model_outputs", "EvaluationResult", "Question"]
 class Question(BaseModel):
     question: str
     answer: str
-    is_question_mentioned: bool
     is_question_answered: bool
+    requires_additional_information: bool
+    is_speculative: bool
+    is_confident: bool
 
 
 class EvaluationResult(BaseModel):
@@ -137,12 +139,17 @@ Question text could be complex and contain several questions.
 
 Detect Questions (one or several) in the question text.
 For each question in Questions:
-    Check if the question is mentioned AND
-    Check if the question is answered
+    Check if the question is answered AND
+    Check if the question requires additional information AND
+    Check if the answer is speculative: if answer is speculative due to insufficient context AND
+    Detect is_confident: was answer confident or not. 
+    
 
 CRITERIA:
-is_question_mentioned -- answer text contains mentions of the question. Not necessarily gives an answer.
 is_question_answered -- question has a reasonable answer, supplemented with details.  
+requires_additional_information -- whether additional information is needed to properly answer
+is_speculative -- whether answer is speculative due to insufficient context.
+is_confident -- whether answer is confident or not.
 
 Example:
 QUESTION: Is Stevens listed as an Approved Manufacturer or is a Substitution Request needed for this?
@@ -157,8 +164,10 @@ Output format:
         {
             "question": "Is Stevens an Approved Manufacturer?",
             "answer": "Yes",
-            "is_question_mentioned": boolean,
-            "is_question_answered": boolean
+            "is_question_answered": boolean,
+            "requires_additional_information": boolean,
+            "is_speculative": boolean,
+            "is_confident": boolean
         }
         ...
     ]

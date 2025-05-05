@@ -6,8 +6,8 @@ import openai
 from more_itertools import chunked
 from openai import OpenAI
 
-from evaluation.eval_utils import eval_file_path
-from evaluation.globals import SEMAPHORE_LIMIT, EMBEDDING_BATCH_SIZE, SAVE_STRATEGY
+from evaluation.stage3_evaluation.eval_utils import eval_file_path
+from evaluation.globals import SEMAPHORE_EMBEDDINGS_LIMIT, EMBEDDING_BATCH_SIZE, SAVE_STRATEGY
 from core.logger import info
 from core.repositories.repo_files import FileItem
 from core.workers.w_extractor import get_file_paragraphs
@@ -27,7 +27,7 @@ async def process_file_paragraphs(
         file: FileItem,
         paragraphs_list: List[ParagraphData],
 ):
-    semaphore = asyncio.Semaphore(SEMAPHORE_LIMIT)
+    semaphore = asyncio.Semaphore(SEMAPHORE_EMBEDDINGS_LIMIT)
 
     async def process_paragraphs_batch_with_semaphore(
             _paragraphs: List[ParagraphData]

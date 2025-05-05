@@ -5,8 +5,9 @@ from aiohttp import ClientSession
 
 from core.logger import exception, info
 from core.repositories.repo_files import FileItem
+from evaluation.globals import CHAT_MODEL, SEMAPHORE_CHAT_LIMIT
 from evaluation.questions import EvalQuestionCombined
-from evaluation.subchat import call_chat_completions_non_streaming
+from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming
 from processing.p_models import ParagraphData
 from openai_wrappers.types import ChatMessage, ChatMessageUser, ChatMessageSystem
 
@@ -28,9 +29,16 @@ async def golden_answers_worker(
     try:
         resp = await call_chat_completions_non_streaming(
             http_session,
-            messages
+            messages,
+            CHAT_MODEL,
         )
-        answer: str = resp["choices"][0]["message"]["content"]
+        try:
+            answer: str = resp["choices"][0]["message"]["content"]
+        except Exception as e:
+            info(resp)
+            exception(f"Error while getting golden answers: {e}")
+            return None
+
         return question_id, answer
 
     except Exception as e:
@@ -43,7 +51,7 @@ async def golden_answers_for_doc(
         doc_text: str,
         questions: List[EvalQuestionCombined]
 ) -> Dict[int, str]:
-    semaphore = asyncio.Semaphore(5)
+    semaphore = asyncio.Semaphore(SEMAPHORE_CHAT_LIMIT)
 
     async def golden_answers_with_semaphore(
             _messages: List[ChatMessage],

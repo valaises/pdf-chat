@@ -14,13 +14,18 @@ class EvalQuestion(BaseModel):
 
 class EvalQuestionSplit(BaseModel):
     id: int
-    questions: List[str]
+    question: str
+
+
+class EvalQuestionsSplit(BaseModel):
+    id: int
+    questions: List[EvalQuestionSplit]
 
 
 class EvalQuestionCombined(BaseModel):
     id: int
     question_text: str
-    questions_split: List[str]
+    questions_split: List[EvalQuestionSplit]
 
 
 def load_json_file(file_path: Path) -> Any:
@@ -46,9 +51,9 @@ def load_questions_str(file_path: Path) -> List[EvalQuestion]:
     return [EvalQuestion(id=idx, question=text) for idx, text in enumerate(questions_str)]
 
 
-def load_questions_split(file_path: Path) -> List[EvalQuestionSplit]:
+def load_questions_split(file_path: Path) -> List[EvalQuestionsSplit]:
     """Load split questions from a JSON file as EvalQuestionSplit objects."""
-    questions_split = load_json_file(file_path)
+    questions_split: List[List[str]] = load_json_file(file_path)
 
     if not isinstance(questions_split, list):
         raise TypeError(f"Expected a JSON array in '{file_path}'")
@@ -61,8 +66,19 @@ def load_questions_split(file_path: Path) -> List[EvalQuestionSplit]:
             if not isinstance(question, str):
                 raise TypeError(f"Question {j} in group {i} in '{file_path}' is not a string")
 
-    return [EvalQuestionSplit(id=idx, questions=question_group)
-            for idx, question_group in enumerate(questions_split)]
+    return [
+        EvalQuestionsSplit(
+            id=idx,
+            questions=[
+                EvalQuestionSplit(
+                    id=q_idx,
+                    question=q
+                )
+                for (q_idx, q) in enumerate(question_group)
+            ]
+        )
+        for idx, question_group in enumerate(questions_split)
+    ]
 
 
 def load_combined_questions(text_file_path: Path, split_file_path: Path) -> List[EvalQuestionCombined]:

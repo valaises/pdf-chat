@@ -5,6 +5,7 @@ requires-python = ">=3.12"
 members = [
     "chat-with-pdf-poc",
     "core",
+    "evaluation",
     "extraction",
     "openai-wrappers",
     "processing",
@@ -248,6 +249,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527
 wheels = [
     { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277 },
 ]
+
+[[package]]
+name = "evaluation"
+version = "0.1.0"
+source = { virtual = "src/evaluation" }
 
 [[package]]
 name = "extraction"

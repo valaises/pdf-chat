@@ -7,7 +7,6 @@ from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 
-from core.globals import PROCESSING_STRATEGY, SAVE_STRATEGY
 from core.repositories.repo_files import FilesRepository
 from vectors.repositories.repo_milvus import MilvusRepository
 from vectors.repositories.repo_redis import RedisRepository

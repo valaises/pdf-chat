@@ -1,20 +1,23 @@
 import asyncio
+import json
 from typing import List, Dict, Optional, Tuple
 
 from aiohttp import ClientSession
 from pydantic import BaseModel
 
 from core.logger import exception, info
-from evaluation.eval_utils import parse_model_output_json
+from evaluation.globals import SEMAPHORE_EVAL_LIMIT, CHAT_EVAL_MODEL
+from evaluation.stage3_evaluation.eval_utils import parse_model_output_json
 from evaluation.questions import EvalQuestionCombined
-from evaluation.subchat import call_chat_completions_non_streaming
+from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming
 from openai_wrappers.types import ChatMessage, ChatMessageUser
 
 
-__all__ = ["evaluate_model_outputs", "EvaluationResult", "Question"]
+__all__ = ["evaluate_model_outputs", "EvaluationResult", "QuestionEval"]
 
 
-class Question(BaseModel):
+class QuestionEval(BaseModel):
+    id: int
     question: str
     answer: str
     is_question_answered: bool
@@ -24,7 +27,7 @@ class Question(BaseModel):
 
 
 class EvaluationResult(BaseModel):
-    questions: List[Question]
+    questions: List[QuestionEval]
 
 
 async def evaluate_answer_worker(
@@ -33,7 +36,11 @@ async def evaluate_answer_worker(
         question_id: int,
 ) -> Optional[Tuple[int, EvaluationResult]]:
     try:
-        resp = await call_chat_completions_non_streaming(http_session, messages)
+        resp = await call_chat_completions_non_streaming(
+            http_session,
+            messages,
+            CHAT_EVAL_MODEL
+        )
         answer: str = resp["choices"][0]["message"]["content"]
         e_res: EvaluationResult = parse_model_output_json(answer, EvaluationResult)
         return question_id, e_res
@@ -48,7 +55,7 @@ async def evaluate_answers_for_doc(
         questions: List[EvalQuestionCombined],
         doc_answers: Dict[int, str],
 ) -> Dict[int, EvaluationResult]:
-    semaphore = asyncio.Semaphore(5)
+    semaphore = asyncio.Semaphore(SEMAPHORE_EVAL_LIMIT)
 
     async def evaluate_answer_with_semaphore(
             _messages: List[ChatMessage],
@@ -63,7 +70,11 @@ async def evaluate_answers_for_doc(
         answer = doc_answers[question.id]
 
         prompt = PROMPT.replace(
-            "%questions%", "\n".join(question.questions_split)
+            "%questions%",
+            "\n".join([
+                json.dumps(q.model_dump())
+                for q in question.questions_split
+            ])
         ).replace(
             "%answer%", answer
         )
@@ -163,6 +174,7 @@ Output format:
 {
     "questions": [
         {
+            "id": 0
             "question": "Is Stevens an Approved Manufacturer?",
             "answer": "Yes",
             "is_question_answered": boolean,
@@ -175,9 +187,11 @@ Output format:
 }
 ```
 
-WHERE::
+WHERE:
+id: id taken from QUESTIONS section
 question: very compact question text
 answer: very compact summary of the actual answer
 
 Provide output in a valid machine-readable JSON format.
 """
+# we will assume model will match ids correctly

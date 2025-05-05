@@ -1,21 +1,20 @@
-import asyncio
 from typing import List, Dict
 
 from aiohttp import ClientSession
 
-from core.logger import info
-from evaluation.globals import CHAT_ENDPOINT_API_KEY, CHAT_ENDPOINT, CHAT_MODEL
-from openai_wrappers.types import ChatMessage, ChatMessageUser
+from evaluation.globals import CHAT_ENDPOINT_API_KEY, CHAT_ENDPOINT
+from openai_wrappers.types import ChatMessage
 
 
 async def call_chat_completions_non_streaming(
         http_session: ClientSession,
         messages: List[ChatMessage],
+        model: str,
         tools: List[Dict[str, str]] = None
 ):
     # Request payload with stream=False
     payload = {
-        "model": CHAT_MODEL,
+        "model": model,
         "messages": [m.model_dump() for m in messages],
         "stream": False,
         "temperature": 0.7,
@@ -46,15 +45,3 @@ async def call_chat_completions_non_streaming(
                 "status_code": response.status,
                 "message": error_text
             }
-
-
-async def test_call_chat(http_session: ClientSession):
-    messages = [
-        ChatMessageUser(role="user", content="Hi there!"),
-    ]
-    result = await call_chat_completions_non_streaming(http_session, messages)
-    info(result)
-
-
-def call_chat(loop: asyncio.AbstractEventLoop, http_session: ClientSession):
-    loop.run_until_complete(test_call_chat(http_session))

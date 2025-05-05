@@ -7,9 +7,10 @@ from core.repositories.repo_files import FileItem
 from core.tools.tool_context import ToolContext
 from core.tools.tool_search_in_file import ToolSearchInFile
 from core.tools.tools import execute_tools
-from evaluation.golden_answers import SYSTEM
+from evaluation.globals import CHAT_MODEL, SEMAPHORE_CHAT_LIMIT
+from evaluation.stage2_answers.ans_golden import SYSTEM
 from evaluation.questions import EvalQuestionCombined
-from evaluation.subchat import call_chat_completions_non_streaming
+from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming
 from openai_wrappers.types import ChatMessage, ChatMessageAssistant, ToolCall, ToolCallFunction, ChatMessageUser, \
     ChatMessageSystem
 
@@ -38,6 +39,7 @@ async def recursive_chat_worker(
             resp = await call_chat_completions_non_streaming(
                 ctx.http_session,
                 messages,
+                CHAT_MODEL,
                 tools,
             )
 
@@ -94,7 +96,7 @@ async def recursive_chat(
         questions: List[EvalQuestionCombined],
         file: FileItem,
 ):
-    semaphore = asyncio.Semaphore(5)
+    semaphore = asyncio.Semaphore(SEMAPHORE_CHAT_LIMIT)
 
     async def recursive_chat_with_semaphore(
             _messages: List[ChatMessage],

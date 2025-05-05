@@ -1,4 +1,5 @@
 import asyncio
+import time
 import uuid
 from pathlib import Path
 from typing import List, Iterator, Tuple, Dict
@@ -10,12 +11,13 @@ from core.globals import ASSETS_DIR, DB_DIR
 from core.logger import init_logger, info
 from core.repositories.repo_files import FileItem, FilesRepository
 from core.tools.tool_context import ToolContext
-from evaluation.eval import evaluate_model_outputs
-from evaluation.extract_and_process import extract_and_process_files
+from evaluation.stage2_answers.ans_golden import produce_golden_answers
+from evaluation.stage3_evaluation.eval_collect_metrics import collect_eval_metrics
+from evaluation.stage3_evaluation.llm_judge import evaluate_model_outputs
+from evaluation.stage1_extraction.extract_and_process import extract_and_process_files
 from evaluation.globals import EVAL_USER_ID, PROCESSING_STRATEGY, SAVE_STRATEGY, DB_EVAL_DIR
-from evaluation.golden_answers import produce_golden_answers
 from evaluation.questions import load_combined_questions
-from evaluation.rag_answers import produce_rag_answers
+from evaluation.stage2_answers.ans_rag import produce_rag_answers
 from processing.p_models import ParagraphData
 
 from vectors.repositories.repo_milvus import MilvusRepository
@@ -68,7 +70,7 @@ def main():
         ASSETS_DIR / "eval" / "questions_split.json",
     )
 
-    questions = questions[:3] # todo: for test runs only
+    # questions = questions[:3] # todo: for test runs only
 
     tool_context = ToolContext(
         http_session=http_session,
@@ -91,9 +93,9 @@ def main():
         file_paragraphs: List[Tuple[FileItem, List[ParagraphData]]] = [
             (f, file_paragraphs_dict[f.file_name_orig]) for f in eval_files
         ]
-        # golden_answers = produce_golden_answers(loop, http_session, file_paragraphs, questions)
+        golden_answers = produce_golden_answers(loop, http_session, file_paragraphs, questions)
 
-        # eval_results = evaluate_model_outputs(loop, http_session, questions, golden_answers)
+        eval_golden = evaluate_model_outputs(loop, http_session, questions, golden_answers)
 
         rag_results = produce_rag_answers(tool_context, loop, eval_files, questions)
         rag_answers: Dict[str, Dict[int, str]] = {
@@ -102,8 +104,15 @@ def main():
             } for file_name, fn_results in rag_results.items()
         }
 
-        rag_results = evaluate_model_outputs(loop, http_session, questions, rag_answers)
-        info(f"{rag_results=}")
+        eval_pred = evaluate_model_outputs(loop, http_session, questions, rag_answers)
+        info(f"{eval_pred=}")
+
+        t0 = time.time()
+        eval_metrics = collect_eval_metrics(
+            eval_golden, eval_pred
+        )
+        info(f"{eval_metrics=}")
+        info(f"collect_eval_metrics: {time.time() - t0:.2f}s")
 
 
     finally:

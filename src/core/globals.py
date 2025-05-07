@@ -14,6 +14,8 @@ BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
 FILES_DIR = BASE_DIR / "files"
 LOGS_DIR = BASE_DIR / "logs"
 TELEMETRY_DIR = BASE_DIR / "telemetry"
+EVALUATIONS_DIR = BASE_DIR / "evaluations"
+EVALUATIONS_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_DIR = BASE_DIR / "db"
 DB_DIR.mkdir(parents=True, exist_ok=True)

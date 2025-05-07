@@ -27,6 +27,7 @@ class QuestionEval(BaseModel):
 
 
 class EvaluationResult(BaseModel):
+    answer: Optional[str] = None
     questions: List[QuestionEval]
 
 
@@ -34,6 +35,7 @@ async def evaluate_answer_worker(
         http_session: ClientSession,
         messages: List[ChatMessage],
         question_id: int,
+        orig_answer: str,
 ) -> Optional[Tuple[int, EvaluationResult]]:
     try:
         resp = await call_chat_completions_non_streaming(
@@ -43,6 +45,7 @@ async def evaluate_answer_worker(
         )
         answer: str = resp["choices"][0]["message"]["content"]
         e_res: EvaluationResult = parse_model_output_json(answer, EvaluationResult)
+        e_res.answer = orig_answer
         return question_id, e_res
 
     except Exception as e:
@@ -60,9 +63,10 @@ async def evaluate_answers_for_doc(
     async def evaluate_answer_with_semaphore(
             _messages: List[ChatMessage],
             question_id: int,
+            answer: str,
     ):
         async with semaphore:
-            return await evaluate_answer_worker(http_session, _messages, question_id)
+            return await evaluate_answer_worker(http_session, _messages, question_id, answer)
 
     tasks = []
     for question in questions:
@@ -83,7 +87,7 @@ async def evaluate_answers_for_doc(
             ChatMessageUser(role="user", content=prompt)
         ]
         tasks.append(asyncio.create_task(
-            evaluate_answer_with_semaphore(messages, question.id)
+            evaluate_answer_with_semaphore(messages, question.id, answer)
         ))
 
     results: List[Optional[Tuple[int, EvaluationResult]]] = await asyncio.gather(*tasks)

@@ -3,16 +3,15 @@ from dataclasses import dataclass
 
 import numpy as np
 from numba import jit
+from pydantic import BaseModel
 
 
-@dataclass
-class BinaryMetric:
+class BinaryMetric(BaseModel):
     value: float = 0.
     ci: Optional[Tuple[float, float]] = None
 
 
-@dataclass
-class BinaryMetrics:
+class BinaryMetrics(BaseModel):
     accuracy: BinaryMetric
     precision: BinaryMetric
     recall: BinaryMetric
@@ -21,18 +20,12 @@ class BinaryMetrics:
     n_samples: int = 0
 
 
-@dataclass
-class BooleanFields:
+class BooleanFields(BaseModel):
     is_question_answered: BinaryMetrics
     requires_additional_information: BinaryMetrics
     is_speculative: BinaryMetrics
     is_confident: BinaryMetrics
     comprehensive_answer: BinaryMetrics
-
-
-@dataclass
-class EvaluationMetrics:
-    boolean_fields: BooleanFields
 
 
 @jit(nopython=True)

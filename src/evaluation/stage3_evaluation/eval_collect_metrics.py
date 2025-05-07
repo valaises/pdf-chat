@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Dict, List
 
+from pydantic import BaseModel
+
 from evaluation.stage3_evaluation.llm_judge import EvaluationResult, QuestionEval
 from evaluation.stage3_evaluation.metrics import BooleanFields, calculate_binary_metrics
 
@@ -31,8 +33,8 @@ class EvalBinResults:
     overall: ResultsBinFieldsTuple = field(default_factory=ResultsBinFieldsTuple)
 
 
-@dataclass
-class EvalResultsMetrics:
+
+class EvalResultsMetrics(BaseModel):
     per_question: Dict[str, BooleanFields]
     per_file: Dict[str, BooleanFields]
     overall: BooleanFields

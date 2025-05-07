@@ -11,6 +11,7 @@ services:
       - ./logs:/app/logs
       - ./files:/app/files
       - ./telemetry:/app/telemetry
+      - ./evaluations:/app/evaluations
     restart: unless-stopped
     depends_on:
       - redis

@@ -11,6 +11,8 @@ from core.globals import ASSETS_DIR, DB_DIR
 from core.logger import init_logger, info
 from core.repositories.repo_files import FileItem, FilesRepository
 from core.tools.tool_context import ToolContext
+from evaluation.save_results import get_next_evaluation_directory, dump_eval_params, dump_stage1_extraction, \
+    dump_stage2_answers, dump_stage3_llm_judge, dump_stage3_metrics
 from evaluation.stage2_answers.ans_golden import produce_golden_answers
 from evaluation.stage3_evaluation.eval_collect_metrics import collect_eval_metrics
 from evaluation.stage3_evaluation.llm_judge import evaluate_model_outputs
@@ -18,15 +20,15 @@ from evaluation.stage1_extraction.extract_and_process import extract_and_process
 from evaluation.globals import EVAL_USER_ID, PROCESSING_STRATEGY, SAVE_STRATEGY, DB_EVAL_DIR
 from evaluation.questions import load_combined_questions
 from evaluation.stage2_answers.ans_rag import produce_rag_answers
+from evaluation.tui import prompt_user_for_evaluation_details
 from processing.p_models import ParagraphData
-
 from vectors.repositories.repo_milvus import MilvusRepository
 from vectors.repositories.repo_redis import RedisRepository
 
 
 __all__ = []
 
-
+# todo: count tokens as well: add metering
 def main():
     init_logger(False)
     info("Logger initialized")
@@ -45,6 +47,11 @@ def main():
         )
         for f in eval_files
     ]
+
+    questions = load_combined_questions(
+        ASSETS_DIR / "eval" / "questions_str.json",
+        ASSETS_DIR / "eval" / "questions_split.json",
+    )
 
     files_repository = FilesRepository(DB_DIR / "files.db")
     files_repository.delete_user_files_sync(EVAL_USER_ID)
@@ -65,10 +72,6 @@ def main():
     client = OpenAI()
     http_session = aiohttp.ClientSession(loop=loop)
 
-    questions = load_combined_questions(
-        ASSETS_DIR / "eval" / "questions_str.json",
-        ASSETS_DIR / "eval" / "questions_split.json",
-    )
 
     # questions = questions[:3] # todo: for test runs only
 
@@ -80,6 +83,10 @@ def main():
         milvus_repository=milvus_repository,
         openai=client,
     )
+
+    eval_dir = get_next_evaluation_directory()
+    eval_details = prompt_user_for_evaluation_details()
+    dump_eval_params(eval_dir, eval_details, eval_files, questions)
 
     try:
         file_paragraphs_dict = extract_and_process_files(
@@ -93,9 +100,9 @@ def main():
         file_paragraphs: List[Tuple[FileItem, List[ParagraphData]]] = [
             (f, file_paragraphs_dict[f.file_name_orig]) for f in eval_files
         ]
-        golden_answers = produce_golden_answers(loop, http_session, file_paragraphs, questions)
+        dump_stage1_extraction(eval_dir, file_paragraphs)
 
-        eval_golden = evaluate_model_outputs(loop, http_session, questions, golden_answers)
+        golden_answers = produce_golden_answers(loop, http_session, file_paragraphs, questions)
 
         rag_results = produce_rag_answers(tool_context, loop, eval_files, questions)
         rag_answers: Dict[str, Dict[int, str]] = {
@@ -103,15 +110,17 @@ def main():
                 k: v[-1].content for k, v in fn_results.items()
             } for file_name, fn_results in rag_results.items()
         }
+        dump_stage2_answers(eval_dir, golden_answers, rag_results, rag_answers, questions)
 
-        eval_pred = evaluate_model_outputs(loop, http_session, questions, rag_answers)
-        info(f"{eval_pred=}")
+        eval_golden = evaluate_model_outputs(loop, http_session, questions, golden_answers)
+        eval_rag = evaluate_model_outputs(loop, http_session, questions, rag_answers)
+        dump_stage3_llm_judge(eval_dir, eval_golden, eval_rag, questions)
 
         t0 = time.time()
         eval_metrics = collect_eval_metrics(
-            eval_golden, eval_pred
+            eval_golden, eval_rag
         )
-        info(f"{eval_metrics=}")
+        dump_stage3_metrics(eval_dir, eval_metrics)
         info(f"collect_eval_metrics: {time.time() - t0:.2f}s")
 
 

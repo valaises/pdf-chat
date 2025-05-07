@@ -32,9 +32,9 @@ async def recursive_chat_worker(
             if iters == max_iters:
                 tools = None
 
-            messages.append(ChatMessageUser(
-                role="user", content=f"Give your final answer\n----\n{question.question_text}"
-            ))
+                messages.append(ChatMessageUser(
+                    role="user", content=f"Give your final answer\n----\n{question.question_text}"
+                ))
 
             resp = await call_chat_completions_non_streaming(
                 ctx.http_session,

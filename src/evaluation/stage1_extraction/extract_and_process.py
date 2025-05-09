@@ -6,8 +6,9 @@ import openai
 from more_itertools import chunked
 from openai import OpenAI
 
+from core.globals import SAVE_STRATEGY
 from evaluation.stage3_evaluation.eval_utils import eval_file_path
-from evaluation.globals import SEMAPHORE_EMBEDDINGS_LIMIT, EMBEDDING_BATCH_SIZE, SAVE_STRATEGY
+from evaluation.globals import SEMAPHORE_EMBEDDINGS_LIMIT, EMBEDDING_BATCH_SIZE
 from core.logger import info
 from core.repositories.repo_files import FileItem
 from core.workers.w_extractor import get_file_paragraphs

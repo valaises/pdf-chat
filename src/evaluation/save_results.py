@@ -4,13 +4,12 @@ from typing import List, Tuple, Dict
 
 from pydantic import BaseModel
 
-from core.globals import EVALUATIONS_DIR
-from evaluation.globals import PROCESSING_STRATEGY, SAVE_STRATEGY, CHAT_MODEL, CHAT_EVAL_MODEL
+from core.globals import EVALUATIONS_DIR, PROCESSING_STRATEGY, SAVE_STRATEGY
+from evaluation.globals import CHAT_MODEL, CHAT_EVAL_MODEL
 from evaluation.questions import EvalQuestionCombined
-from evaluation.stage3_evaluation.eval_collect_metrics import EvalResultsMetrics
+from evaluation.stage3_evaluation.eval_collect_metrics import CategoryMetrics
 from evaluation.stage3_evaluation.llm_judge import EvaluationResult
 from openai_wrappers.types import ChatMessage
-from openai_wrappers.utils import chat_message_readable
 from processing.p_models import ParagraphData
 from core.repositories.repo_files import FileItem
 
@@ -110,10 +109,8 @@ def dump_stage2_answers(
     dir_name = eval_dir.joinpath("stage2_answers")
     golden_answers_dir = dir_name / "golden_answers"
     golden_answers_dir.mkdir(exist_ok=True, parents=True)
-    rag_results_raw = dir_name / "rag_results_raw"
+    rag_results_raw = dir_name / "rag_results"
     rag_results_raw.mkdir(exist_ok=True, parents=True)
-    rag_results_readable = dir_name / "rag_results_readable"
-    rag_results_readable.mkdir(exist_ok=True, parents=True)
     rag_answers_dir = dir_name / "rag_answers"
     rag_answers_dir.mkdir(exist_ok=True, parents=True)
 
@@ -129,15 +126,10 @@ def dump_stage2_answers(
     for file_name, rag_results in rag_results_dicts.items():
         file_dir_raw = rag_results_raw / file_name
         file_dir_raw.mkdir(exist_ok=True, parents=True)
-        file_dir_readable = rag_results_readable / file_name
-        file_dir_readable.mkdir(exist_ok=True, parents=True)
 
         for q_id, rag_messages in rag_results.items():
             file_dir_raw.joinpath(f"{q_id}.json").write_text(
                 json.dumps([m.model_dump() for m in rag_messages], indent=2))
-
-            messages_readable = "\n\n".join([chat_message_readable(m) for m in rag_messages])
-            file_dir_readable.joinpath(f"{q_id}.txt").write_text(messages_readable)
 
     for file_name, rag_answers in rag_answers_dicts.items():
         file_answers_text = f"FN: {file_name}\n\n\n\n"
@@ -177,7 +169,7 @@ def dump_stage3_llm_judge(
         rag_evals: Dict[str, Dict[int, EvaluationResult]],
         questions: List[EvalQuestionCombined],
 ):
-    s3_dir = eval_dir.joinpath("stage3")
+    s3_dir = eval_dir.joinpath("stage3_evaluation")
     llm_judge_dir = s3_dir / "llm_judge"
     golden_evals_dir = llm_judge_dir / "golden_evals"
     golden_evals_dir.mkdir(exist_ok=True, parents=True)
@@ -195,19 +187,15 @@ def dump_stage3_llm_judge(
 
 def dump_stage3_metrics(
         eval_dir: Path,
-        metrics: EvalResultsMetrics,
+        metrics: CategoryMetrics,
 ):
-    s3_dir = eval_dir.joinpath("stage3")
+    s3_dir = eval_dir.joinpath("stage3_evaluation")
     metrics_dir = s3_dir / "metrics"
-    question_wise_dir = metrics_dir / "question-wise"
-    question_wise_dir.mkdir(exist_ok=True, parents=True)
-    filewise_dir = metrics_dir / "file-wise"
-    filewise_dir.mkdir(exist_ok=True, parents=True)
+    metrics_dir.mkdir(exist_ok=True, parents=True)
 
-    for q_id, q_metrics in metrics.per_question.items():
-        question_wise_dir.joinpath(f"{q_id}.json").write_text(q_metrics.model_dump_json(indent=2))
+    for k in metrics.model_fields.keys():
+        if k != "passed_overall":
+            v = getattr(metrics, k)
+            metrics_dir.joinpath(k).with_suffix(".json").write_text(v.model_dump_json(indent=2))
 
-    for file_name, f_metrics in metrics.per_file.items():
-        filewise_dir.joinpath(f"{file_name}.json").write_text(f_metrics.model_dump_json(indent=2))
-
-    metrics_dir.joinpath("overall.json").write_text(metrics.overall.model_dump_json(indent=2))
+    metrics_dir.joinpath("passed_overall.json").write_text(json.dumps(metrics.passed_overall, indent=2))

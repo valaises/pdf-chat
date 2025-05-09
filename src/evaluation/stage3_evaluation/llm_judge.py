@@ -25,6 +25,14 @@ class QuestionEval(BaseModel):
     is_speculative: bool
     is_confident: bool
 
+    @property
+    def comprehensive_answer(self) -> bool:
+        return (
+                self.is_question_answered and
+                not self.requires_additional_information and
+                not self.is_speculative and
+                self.is_confident
+        )
 
 class EvaluationResult(BaseModel):
     answer: Optional[str] = None

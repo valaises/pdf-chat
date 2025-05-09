@@ -7,17 +7,17 @@ from typing import List, Iterator, Tuple, Dict
 import aiohttp
 from openai import OpenAI
 
-from core.globals import ASSETS_DIR, DB_DIR
+from core.globals import ASSETS_DIR, DB_DIR, PROCESSING_STRATEGY, SAVE_STRATEGY
 from core.logger import init_logger, info
 from core.repositories.repo_files import FileItem, FilesRepository
 from core.tools.tool_context import ToolContext
 from evaluation.save_results import get_next_evaluation_directory, dump_eval_params, dump_stage1_extraction, \
     dump_stage2_answers, dump_stage3_llm_judge, dump_stage3_metrics
 from evaluation.stage2_answers.ans_golden import produce_golden_answers
-from evaluation.stage3_evaluation.eval_collect_metrics import collect_eval_metrics
+from evaluation.stage3_evaluation.eval_collect_metrics import collect_eval_metrics, passed_overall_to_dataframe
 from evaluation.stage3_evaluation.llm_judge import evaluate_model_outputs
 from evaluation.stage1_extraction.extract_and_process import extract_and_process_files
-from evaluation.globals import EVAL_USER_ID, PROCESSING_STRATEGY, SAVE_STRATEGY, DB_EVAL_DIR
+from evaluation.globals import EVAL_USER_ID, DB_EVAL_DIR
 from evaluation.questions import load_combined_questions
 from evaluation.stage2_answers.ans_rag import produce_rag_answers
 from evaluation.tui import prompt_user_for_evaluation_details
@@ -122,6 +122,9 @@ def main():
         )
         dump_stage3_metrics(eval_dir, eval_metrics)
         info(f"collect_eval_metrics: {time.time() - t0:.2f}s")
+
+        passed_overall_df = passed_overall_to_dataframe(eval_metrics)
+        info(passed_overall_df)
 
 
     finally:

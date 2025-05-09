@@ -7,9 +7,10 @@ from pydantic import BaseModel
 
 from core.logger import exception, info
 from evaluation.globals import SEMAPHORE_EVAL_LIMIT, CHAT_EVAL_MODEL
+from evaluation.metering import Metering, MeteringItem
 from evaluation.stage3_evaluation.eval_utils import parse_model_output_json
 from evaluation.questions import EvalQuestionCombined
-from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming
+from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming, try_get_usage
 from openai_wrappers.types import ChatMessage, ChatMessageUser
 
 
@@ -41,6 +42,7 @@ class EvaluationResult(BaseModel):
 
 async def evaluate_answer_worker(
         http_session: ClientSession,
+        metering: Metering,
         messages: List[ChatMessage],
         question_id: int,
         orig_answer: str,
@@ -51,6 +53,14 @@ async def evaluate_answer_worker(
             messages,
             CHAT_EVAL_MODEL
         )
+
+        usage = try_get_usage(resp)
+        metering_item = metering.stage3.setdefault(CHAT_EVAL_MODEL, MeteringItem())
+        metering_item.requests_cnt += 1
+        metering_item.messages_sent_cnt += len(messages)
+        metering_item.tokens_in += usage.prompt_tokens
+        metering_item.tokens_out += usage.completion_tokens
+
         answer: str = resp["choices"][0]["message"]["content"]
         e_res: EvaluationResult = parse_model_output_json(answer, EvaluationResult)
         e_res.answer = orig_answer
@@ -63,6 +73,7 @@ async def evaluate_answer_worker(
 
 async def evaluate_answers_for_doc(
         http_session: ClientSession,
+        metering: Metering,
         questions: List[EvalQuestionCombined],
         doc_answers: Dict[int, str],
 ) -> Dict[int, EvaluationResult]:
@@ -74,7 +85,7 @@ async def evaluate_answers_for_doc(
             answer: str,
     ):
         async with semaphore:
-            return await evaluate_answer_worker(http_session, _messages, question_id, answer)
+            return await evaluate_answer_worker(http_session, metering, _messages, question_id, answer)
 
     tasks = []
     for question in questions:
@@ -109,6 +120,7 @@ async def evaluate_answers_for_doc(
 def evaluate_model_outputs(
         loop: asyncio.AbstractEventLoop,
         http_session: ClientSession,
+        metering: Metering,
         questions: List[EvalQuestionCombined],
         answers: Dict[str, Dict[int, str]]
 ):
@@ -130,7 +142,7 @@ def evaluate_model_outputs(
                 raise Exception("Failed to eval: too many tries")
 
             eval_results_for_doc_iter: Dict[int, EvaluationResult] = loop.run_until_complete(
-                evaluate_answers_for_doc(http_session, questions, not_answered)
+                evaluate_answers_for_doc(http_session, metering, questions, not_answered)
             )
             eval_results_for_doc.update(eval_results_for_doc_iter)
 
@@ -206,4 +218,3 @@ answer: very compact summary of the actual answer
 
 Provide output in a valid machine-readable JSON format.
 """
-# we will assume model will match ids correctly

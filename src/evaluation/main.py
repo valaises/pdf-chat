@@ -11,8 +11,9 @@ from core.globals import ASSETS_DIR, DB_DIR, PROCESSING_STRATEGY, SAVE_STRATEGY
 from core.logger import init_logger, info
 from core.repositories.repo_files import FileItem, FilesRepository
 from core.tools.tool_context import ToolContext
+from evaluation.metering import Metering
 from evaluation.save_results import get_next_evaluation_directory, dump_eval_params, dump_stage1_extraction, \
-    dump_stage2_answers, dump_stage3_llm_judge, dump_stage3_metrics
+    dump_stage2_answers, dump_stage3_llm_judge, dump_stage3_metrics, dump_metering
 from evaluation.stage2_answers.ans_golden import produce_golden_answers
 from evaluation.stage3_evaluation.eval_collect_metrics import collect_eval_metrics, passed_overall_to_dataframe
 from evaluation.stage3_evaluation.llm_judge import evaluate_model_outputs
@@ -28,7 +29,7 @@ from vectors.repositories.repo_redis import RedisRepository
 
 __all__ = []
 
-# todo: count tokens as well: add metering
+
 def main():
     init_logger(False)
     info("Logger initialized")
@@ -71,7 +72,7 @@ def main():
     loop = asyncio.new_event_loop()
     client = OpenAI()
     http_session = aiohttp.ClientSession(loop=loop)
-
+    metering = Metering()
 
     # questions = questions[:3] # todo: for test runs only
 
@@ -102,9 +103,9 @@ def main():
         ]
         dump_stage1_extraction(eval_dir, file_paragraphs)
 
-        golden_answers = produce_golden_answers(loop, http_session, file_paragraphs, questions)
+        golden_answers = produce_golden_answers(loop, http_session, metering, file_paragraphs, questions)
 
-        rag_results = produce_rag_answers(tool_context, loop, eval_files, questions)
+        rag_results = produce_rag_answers(tool_context, loop, metering, eval_files, questions)
         rag_answers: Dict[str, Dict[int, str]] = {
             file_name: {
                 k: v[-1].content for k, v in fn_results.items()
@@ -112,8 +113,8 @@ def main():
         }
         dump_stage2_answers(eval_dir, golden_answers, rag_results, rag_answers, questions)
 
-        eval_golden = evaluate_model_outputs(loop, http_session, questions, golden_answers)
-        eval_rag = evaluate_model_outputs(loop, http_session, questions, rag_answers)
+        eval_golden = evaluate_model_outputs(loop, http_session, metering, questions, golden_answers)
+        eval_rag = evaluate_model_outputs(loop, http_session, metering, questions, rag_answers)
         dump_stage3_llm_judge(eval_dir, eval_golden, eval_rag, questions)
 
         t0 = time.time()
@@ -123,9 +124,11 @@ def main():
         dump_stage3_metrics(eval_dir, eval_metrics)
         info(f"collect_eval_metrics: {time.time() - t0:.2f}s")
 
+
         passed_overall_df = passed_overall_to_dataframe(eval_metrics)
         info(passed_overall_df)
 
+        dump_metering(eval_dir, metering)
 
     finally:
         files_repository.delete_user_files_sync(EVAL_USER_ID)

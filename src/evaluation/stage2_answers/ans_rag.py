@@ -8,15 +8,17 @@ from core.tools.tool_context import ToolContext
 from core.tools.tool_search_in_file import ToolSearchInFile
 from core.tools.tools import execute_tools
 from evaluation.globals import CHAT_MODEL, SEMAPHORE_CHAT_LIMIT
+from evaluation.metering import Metering, MeteringItem
 from evaluation.stage2_answers.ans_golden import SYSTEM
 from evaluation.questions import EvalQuestionCombined
-from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming
+from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming, try_get_usage
 from openai_wrappers.types import ChatMessage, ChatMessageAssistant, ToolCall, ToolCallFunction, ChatMessageUser, \
     ChatMessageSystem
 
 
 async def recursive_chat_worker(
         ctx: ToolContext,
+        metering: Metering,
         messages: List[ChatMessage],
         question: EvalQuestionCombined,
 ) -> Optional[Tuple[int, List[ChatMessage]]]:
@@ -43,6 +45,13 @@ async def recursive_chat_worker(
                 tools,
             )
 
+            usage = try_get_usage(resp)
+            metering_item = metering.stage2.setdefault(CHAT_MODEL, MeteringItem())
+            metering_item.requests_cnt += 1
+            metering_item.messages_sent_cnt += len(messages)
+            metering_item.tokens_in += usage.prompt_tokens
+            metering_item.tokens_out += usage.completion_tokens
+
             content: str = resp["choices"][0]["message"]["content"] or ""
 
             new_message = ChatMessageAssistant(
@@ -65,15 +74,12 @@ async def recursive_chat_worker(
                 ]
                 new_message.tool_calls = tool_calls
 
-            info(new_message)
-
             messages.append(new_message)
 
             if not new_message.tool_calls:
                 break
 
             tool_results = await execute_tools(ctx, messages)
-            info(f"{tool_results=}")
             messages.extend(tool_results)
 
             if iters == max_iters:
@@ -93,6 +99,7 @@ async def recursive_chat_worker(
 
 async def recursive_chat(
         ctx: ToolContext,
+        metering: Metering,
         questions: List[EvalQuestionCombined],
         file: FileItem,
 ):
@@ -103,7 +110,7 @@ async def recursive_chat(
             _question: EvalQuestionCombined,
     ):
         async with semaphore:
-            return await recursive_chat_worker(ctx, _messages, _question)
+            return await recursive_chat_worker(ctx, metering, _messages, _question)
 
     init_messages = [
         ChatMessageSystem(
@@ -136,6 +143,7 @@ async def recursive_chat(
 def produce_rag_answers(
         ctx: ToolContext,
         loop: asyncio.AbstractEventLoop,
+        metering: Metering,
         files: List[FileItem],
         questions: List[EvalQuestionCombined],
 ) -> Dict[str, Dict[int, List[ChatMessage]]]:
@@ -154,7 +162,7 @@ def produce_rag_answers(
                 raise Exception(f"Failed to produce RAG answers: too many tries")
 
             answers_for_doc_iter: Dict[int, List[ChatMessage]] = loop.run_until_complete(
-                recursive_chat(ctx, questions, file)
+                recursive_chat(ctx, metering, questions, file)
             )
 
             answers_for_doc.update(answers_for_doc_iter)

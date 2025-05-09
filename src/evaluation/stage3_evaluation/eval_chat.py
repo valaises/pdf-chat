@@ -1,9 +1,17 @@
-from typing import List, Dict
+from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
 
 from aiohttp import ClientSession
 
+from core.logger import error
 from evaluation.globals import CHAT_ENDPOINT_API_KEY, CHAT_ENDPOINT
 from openai_wrappers.types import ChatMessage
+
+
+@dataclass
+class ChatCompletionsUsage:
+    completion_tokens: Optional[int] = 0
+    prompt_tokens: Optional[int] = 0
 
 
 async def call_chat_completions_non_streaming(
@@ -45,3 +53,14 @@ async def call_chat_completions_non_streaming(
                 "status_code": response.status,
                 "message": error_text
             }
+
+
+def try_get_usage(resp: Dict[str, Any]) -> ChatCompletionsUsage:
+    usage = ChatCompletionsUsage()
+    try:
+        usage_dict = resp["usage"]
+        usage.completion_tokens += usage_dict["completion_tokens"]
+        usage.prompt_tokens += usage_dict["prompt_tokens"]
+    except Exception as e:
+        error(f"failed to parse usage: {e}")
+    return usage

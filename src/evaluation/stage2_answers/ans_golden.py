@@ -6,8 +6,9 @@ from aiohttp import ClientSession
 from core.logger import exception, info
 from core.repositories.repo_files import FileItem
 from evaluation.globals import CHAT_MODEL, SEMAPHORE_CHAT_LIMIT
+from evaluation.metering import Metering, MeteringItem
 from evaluation.questions import EvalQuestionCombined
-from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming
+from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming, try_get_usage
 from processing.p_models import ParagraphData
 from openai_wrappers.types import ChatMessage, ChatMessageUser, ChatMessageSystem
 
@@ -23,6 +24,7 @@ You use additional context and construct clear concise answer using that context
 
 async def golden_answers_worker(
         http_session: ClientSession,
+        metering: Metering,
         messages: List[ChatMessage],
         question_id: int,
 ) -> Optional[Tuple[int, str]]:
@@ -32,6 +34,13 @@ async def golden_answers_worker(
             messages,
             CHAT_MODEL,
         )
+        usage = try_get_usage(resp)
+        metering_item = metering.stage2.setdefault(CHAT_MODEL, MeteringItem())
+        metering_item.requests_cnt += 1
+        metering_item.messages_sent_cnt += len(messages)
+        metering_item.tokens_in += usage.prompt_tokens
+        metering_item.tokens_out += usage.completion_tokens
+
         try:
             answer: str = resp["choices"][0]["message"]["content"]
         except Exception as e:
@@ -48,6 +57,7 @@ async def golden_answers_worker(
 
 async def golden_answers_for_doc(
         http_session: ClientSession,
+        metering: Metering,
         doc_text: str,
         questions: List[EvalQuestionCombined]
 ) -> Dict[int, str]:
@@ -58,7 +68,7 @@ async def golden_answers_for_doc(
             question_id: int,
     ):
         async with semaphore:
-            return await golden_answers_worker(http_session, _messages, question_id)
+            return await golden_answers_worker(http_session, metering, _messages, question_id)
 
     init_messages = [
         ChatMessageSystem(
@@ -91,6 +101,7 @@ async def golden_answers_for_doc(
 def produce_golden_answers(
         loop: asyncio.AbstractEventLoop,
         http_session: ClientSession,
+        metering: Metering,
         file_paragraphs: List[Tuple[FileItem, List[ParagraphData]]],
         questions: List[EvalQuestionCombined]
 ) -> Dict[str, Dict[int, str]]:
@@ -115,7 +126,7 @@ def produce_golden_answers(
                 raise Exception(f"Failed to produce golden answers: too many tries")
 
             answers_for_doc_iter: Dict[int, str] = loop.run_until_complete(
-                golden_answers_for_doc(http_session, doc_text, questions)
+                golden_answers_for_doc(http_session, metering, doc_text, questions)
             )
             answers_for_doc.update(answers_for_doc_iter)
 

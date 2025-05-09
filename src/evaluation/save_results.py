@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from core.globals import EVALUATIONS_DIR, PROCESSING_STRATEGY, SAVE_STRATEGY
 from evaluation.globals import CHAT_MODEL, CHAT_EVAL_MODEL
+from evaluation.metering import Metering
 from evaluation.questions import EvalQuestionCombined
 from evaluation.stage3_evaluation.eval_collect_metrics import CategoryMetrics
 from evaluation.stage3_evaluation.llm_judge import EvaluationResult
@@ -199,3 +200,10 @@ def dump_stage3_metrics(
             metrics_dir.joinpath(k).with_suffix(".json").write_text(v.model_dump_json(indent=2))
 
     metrics_dir.joinpath("passed_overall.json").write_text(json.dumps(metrics.passed_overall, indent=2))
+
+
+def dump_metering(
+        eval_dir: Path,
+        metering: Metering,
+):
+    eval_dir.joinpath("metering.json").write_text(metering.model_dump_json(indent=2))

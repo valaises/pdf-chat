@@ -13,7 +13,7 @@ from core.repositories.repo_files import FileItem, FilesRepository
 from core.tools.tool_context import ToolContext
 from evaluation.metering import Metering
 from evaluation.save_results import get_next_evaluation_directory, dump_eval_params, dump_stage1_extraction, \
-    dump_stage2_answers, dump_stage3_llm_judge, dump_stage3_metrics, dump_metering
+    dump_stage2_answers, dump_stage3_llm_judge, dump_stage3_metrics, dump_metering, dump_stage4_analysis
 from evaluation.stage2_answers.ans_golden import produce_golden_answers
 from evaluation.stage3_evaluation.eval_collect_metrics import collect_eval_metrics, passed_overall_to_dataframe
 from evaluation.stage3_evaluation.llm_judge import evaluate_model_outputs
@@ -21,6 +21,7 @@ from evaluation.stage1_extraction.extract_and_process import extract_and_process
 from evaluation.globals import EVAL_USER_ID, DB_EVAL_DIR
 from evaluation.questions import load_combined_questions
 from evaluation.stage2_answers.ans_rag import produce_rag_answers
+from evaluation.stage4_analysis.anal_results import analyse_results
 from evaluation.tui import prompt_user_for_evaluation_details
 from processing.p_models import ParagraphData
 from vectors.repositories.repo_milvus import MilvusRepository
@@ -124,9 +125,10 @@ def main():
         dump_stage3_metrics(eval_dir, eval_metrics)
         info(f"collect_eval_metrics: {time.time() - t0:.2f}s")
 
+        # passed_overall_df = passed_overall_to_dataframe(eval_metrics)
 
-        passed_overall_df = passed_overall_to_dataframe(eval_metrics)
-        info(passed_overall_df)
+        anal_results, anal_user_messages = analyse_results(loop, http_session, metering, eval_dir, eval_files)
+        dump_stage4_analysis(eval_dir, anal_results, anal_user_messages)
 
         dump_metering(eval_dir, metering)
 

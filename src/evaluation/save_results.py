@@ -202,6 +202,24 @@ def dump_stage3_metrics(
     metrics_dir.joinpath("passed_overall.json").write_text(json.dumps(metrics.passed_overall, indent=2))
 
 
+def dump_stage4_analysis(
+        eval_dir: Path,
+        anal_results: Dict[str, str],
+        anal_user_messages: Dict[str, str],
+):
+    s4_dir = eval_dir.joinpath("stage4_analysis")
+    anal_results_dir = s4_dir / "analysis_results"
+    anal_results_dir.mkdir(exist_ok=True, parents=True)
+    user_messages_dir = s4_dir / "user_messages"
+    user_messages_dir.mkdir(exist_ok=True, parents=True)
+
+    for file_name, analysis_result in anal_results.items():
+        anal_results_dir.joinpath(Path(file_name).stem).with_suffix(".txt").write_text(analysis_result)
+
+    for file_name, user_message in anal_user_messages.items():
+        user_messages_dir.joinpath(Path(file_name).stem).with_suffix(".txt").write_text(user_message)
+
+
 def dump_metering(
         eval_dir: Path,
         metering: Metering,

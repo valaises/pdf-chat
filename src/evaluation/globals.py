@@ -1,3 +1,5 @@
+import os
+
 from core.globals import DB_DIR
 
 
@@ -10,8 +12,12 @@ SEMAPHORE_EVAL_LIMIT = 3
 SEMAPHORE_EMBEDDINGS_LIMIT = 5
 EMBEDDING_BATCH_SIZE = 128
 
-CHAT_ENDPOINT = "https://llmtools.valerii.cc/v1" # todo: move to .env
-CHAT_ENDPOINT_API_KEY = "lpak-F-2CjtBBJ1wTm18APW1Apg"
-CHAT_MODEL = "gemini-2.0-flash"
-CHAT_EVAL_MODEL = "gpt-4o"
-CHAT_ANALYSE_MODEL = "gemini-2.0-flash"
+CHAT_ENDPOINT = os.environ.get("EVAL_CHAT_ENDPOINT")
+assert CHAT_ENDPOINT is not None, "EVAL_CHAT_ENDPOINT environment variable must be set"
+
+CHAT_ENDPOINT_API_KEY = os.environ.get("EVAL_CHAT_ENDPOINT_API_KEY")
+assert CHAT_ENDPOINT_API_KEY is not None, "EVAL_CHAT_ENDPOINT_API_KEY environment variable must be set"
+
+CHAT_MODEL = os.environ.get("EVAL_CHAT_MODEL", "gemini-2.0-flash")
+CHAT_EVAL_MODEL = os.environ.get("EVAL_CHAT_EVAL_MODEL", "gpt-4o")
+CHAT_ANALYSE_MODEL = os.environ.get("EVAL_CHAT_ANALYSE_MODEL", "gemini-2.0-flash")

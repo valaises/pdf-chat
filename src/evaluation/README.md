@@ -16,9 +16,6 @@ Evaluation consists of 4 Stages (execute consequently):
 Stages (2, 3, 4) use LLM calls:\
 Whereas Stages (2, 4) may use cheaper models like Gemini-2.0-flash, Stage 3 is needy for a more sophisticated model e.g. Claude 3.7, gpt-4o
 
-Evaluation MUST be run INSIDE a container where actual Chat-with-pdf server runs.\
-As it inserts data, such as paragraphs and embeddings into DB, which is accessed during Stage 2: Answers Generation,\
-where model makes calls to LLM_ENDPOINT=llmtools, which calls Chat-with-pdf server. 
 
 Currently, only locally stored embeddings are supported: Redis and Milvus, OpenAI's Vector Storage -- not supported.
 
@@ -41,6 +38,16 @@ Question List is fixed for all documents -- means for each document fixed set of
 As a Question in Question List is frequently a composite one -- contains multiple questions, therefore, for correct evaluation (Stage 3: Evaluation), we need to verify each question separately \
 Question List is AI-generated from Question List. Original Question List contains 19 questions, Split Questions -- 63 questions
 
+## Execution
+
+Evaluation MUST be run INSIDE a container where actual Chat-with-pdf server runs.\
+As it inserts data, such as paragraphs and embeddings into DB, which is accessed during Stage 2: Answers Generation,\
+where model makes calls to LLM_ENDPOINT=llmtools, which calls Chat-with-pdf server. 
+
+To execute evaluation, run the following command:
+```sh
+docker exec docs_mcp python src/evaluation/main.py
+```
 
 ## Approach Description
 

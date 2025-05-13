@@ -38,13 +38,13 @@ clone repositories needed for the stack
 git clone https://github.com/valaises/llm-chat.git &&
 git clone https://github.com/valaises/llm-proxy.git &&
 git clone https://github.com/valaises/llm-tools-server.git &&
-git clone git@github.com:COXIT-CO/chat-with-pdf-poc.git 
+git clone -b eval git@github.com:COXIT-CO/chat-with-pdf-poc.git 
 ```
 
-download docker-compose-stack.yaml
+copy docker-compose-stack.yaml
 
 ```sh
-wget docker-compose-stack.yaml
+cp chat-with-pdf-poc/docker-compose-stack.yaml docker-compose-stack.yaml 
 ```
 
 specify environmental vars
@@ -65,7 +65,6 @@ vim llm-tools-server/.env
 ```sh
 cp chat-with-pdf-poc/.env.example chat-with-pdf-poc/.env
 vim chat-with-pdf-poc/.env
-# specify OPENAI_API_KEY
 ```
 
 Run Docker Compose Stack
@@ -144,6 +143,10 @@ Telescope Emoji + Tool Name -- means model decided to call tool "Tool Name"
 PaperClip Emoji + Tool Name -- means tool call of tool "Tool Name" is completed and results are attached to the chat
 
 Hint: click on those elements to expand them, and view their internals
+
+## Evaluation
+
+Evaluation has a dedicated [README.md](https://github.com/COXIT-CO/chat-with-pdf-poc/tree/eval/src/evaluation)
 
 ## Technical Details
 

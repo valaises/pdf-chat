@@ -44,23 +44,19 @@ Evaluation MUST be run INSIDE a container where actual Chat-with-pdf server runs
 As it inserts data, such as paragraphs and embeddings into DB, which is accessed during Stage 2: Answers Generation,\
 where model makes calls to LLM_ENDPOINT=llmtools, which calls Chat-with-pdf server. 
 
-To execute evaluation, run the following command:
-```sh
-docker exec -e CHAT_ENDPOINT="https://llmtools.valerii.cc/v1" -e CHAT_ENDPOINT_API_KEY="lpak-XXX" container-name python src/evaluation/main.py
-```
-Note: please replace CHAT_ENDPOINT and CHAT_ENDPOINT_API_KEY \
-Note: you could add those vars to .zshrc, to not specify them in command each time
+To execute evaluation, run the following commands:
 
 ```sh
-vim ~/.zshrc
-source ~/.zshrc
+docker exec -it docs_mcp bash
 ```
-
-Then, command gets much shorter:
+Then
 ```sh
-docker exec docs_mcp python src/evaluation/main.py
+EVAL_CHAT_ENDPOINT="http://llm_tools:7016/v1" EVAL_CHAT_ENDPOINT_API_KEY="lpak-XXX" python src/evaluation/main.py
 ```
+Note: please set your CHAT_ENDPOINT_API_KEY, leave EVAL_CHAT_ENDPOINT as is
 
+After execution is completed, you may find results in `evaluations/XXXX`,\
+where XXXX is the biggest number
 
 ## Approach Description
 

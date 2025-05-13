@@ -46,8 +46,21 @@ where model makes calls to LLM_ENDPOINT=llmtools, which calls Chat-with-pdf serv
 
 To execute evaluation, run the following command:
 ```sh
+docker exec -e CHAT_ENDPOINT="https://llmtools.valerii.cc/v1" -e CHAT_ENDPOINT_API_KEY="lpak-XXX" container-name python src/evaluation/main.py
+```
+Note: please replace CHAT_ENDPOINT and CHAT_ENDPOINT_API_KEY \
+Note: you could add those vars to .zshrc, to not specify them in command each time
+
+```sh
+vim ~/.zshrc
+source ~/.zshrc
+```
+
+Then, command gets much shorter:
+```sh
 docker exec docs_mcp python src/evaluation/main.py
 ```
+
 
 ## Approach Description
 

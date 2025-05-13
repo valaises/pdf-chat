@@ -17,6 +17,13 @@ This application provides a complete pipeline for:
 3. Processing the extracted content, uploading to OpenAI's File and Vector Store APIs.
 4. Providing an API interface to List and Execute Tools
 
+## Features
+
+- **File Management**: Upload, list, and delete PDF files
+- **Asynchronous Processing**: Background workers handle resource-intensive tasks
+- **Vector Search**: Semantic search capabilities using OpenAI's vector stores
+- **Stateful Processing**: Track processing status of documents from upload to completion
+
 ## Local Development
 
 create a directory for chat-with-pdf-stack
@@ -138,57 +145,6 @@ PaperClip Emoji + Tool Name -- means tool call of tool "Tool Name" is completed 
 
 Hint: click on those elements to expand them, and view their internals
 
-## Project Structure
-
-```
-chat-with-pdf-poc/
-├── .env.example           # Example structure of ENV variables
-├── Dockerfile             # Docker configuration
-├── docker-compose.yaml    # Docker Compose configuration
-├── README.md              # Project documentation
-├── pyproject.toml         # Python project configuration
-└── src/                   # Source code
-    ├── core/              # Core application components
-    │   ├── app.py         # FastAPI application setup
-    │   ├── args.py        # Command line argument parsing
-    │   ├── globals.py     # Global constants and settings
-    │   ├── logger.py      # Logging configuration
-    │   ├── main.py        # Application entry point
-    │   ├── server.py      # Server configuration
-    │   ├── repositories/  # Data access layer
-    │   │   ├── repo_abstract.py  # Abstract repository base class
-    │   │   └── repo_files.py     # File metadata storage and retrieval
-    │   ├── routers/       # API endpoints
-    │   │   ├── router_base.py    # Base router functionality
-    │   │   ├── router_files.py   # File management endpoints
-    │   │   ├── router_mcpl.py    # Model Context Protocol endpoints
-    │   │   └── schemas.py        # API request/response schemas
-    │   ├── tools/         # Tool implementations for MCPL
-    │   │   ├── tool_context.py   # Context management for tools
-    │   │   ├── tool_list_files.py # File listing tool
-    │   │   ├── tool_search_in_file.py # File search tool
-    │   │   └── tools.py          # Tool registration and management
-    │   └── workers/       # Background processing workers
-    │       ├── w_abstract.py     # Abstract worker base class
-    │       ├── w_extractor.py    # PDF text extraction worker
-    │       ├── w_processor.py    # PDF Text processing worker -- uploads to OpenAI
-    │       └── w_utils.py        # Utility functions for workers
-    ├── coxit/
-    │   └── extractor/     # PDF text extraction components
-    │       └── ...
-    └── openai_wrappers/   # OpenAI API wrappers
-        ├── api_files.py   # OpeanAI's File API wrappers
-        ├── api_vector_store.py # OpenAI's Vector store API wrappers
-        ├── types.py       # Type definitions
-        └── utils.py       # Utility functions
-```
-## Features
-
-- **File Management**: Upload, list, and delete PDF files
-- **Asynchronous Processing**: Background workers handle resource-intensive tasks
-- **Vector Search**: Semantic search capabilities using OpenAI's vector stores
-- **Stateful Processing**: Track processing status of documents from upload to completion
-
 ## Technical Details
 
 ### Architecture
@@ -266,4 +222,3 @@ Files progress through these statuses:
 - [ ] Better PDF object detection using CV Model (~Difficult, Research needed)
 - [ ] Non-text PDFs support using CV model for OD, then extraction of text using OCR (~Moderate, after CV Model implemented)
 - [ ] Questions about Drawings (~Difficult-Very Difficult, after CV Model implemented)
-

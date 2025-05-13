@@ -1,0 +1,81 @@
+
+services:
+  llm-chat:
+    build:
+      context: ./llm-chat
+      dockerfile: Dockerfile.dev
+    container_name: llm-chat-dev
+    volumes:
+      - ./llm-chat:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "5173:5173"
+    command: npm run dev -- --host --strictPort
+    networks:
+      - llm-network
+
+  llm-proxy:
+    build: ./llm-proxy
+    container_name: llm_proxy
+    env_file:
+      - ./llm-proxy/.env
+    ports:
+      - "7012:7012"
+    volumes:
+      - ./llm-proxy-db:/app/db
+    restart: unless-stopped
+    networks:
+      - llm-network
+
+  llm-tools-server:
+    build: ./llm-tools-server
+    container_name: llm_tools
+    env_file:
+      - ./llm-tools-server/.env
+    environment:
+      - LLM_PROXY_ADDRESS=http://llm-proxy:7012/v1
+    ports:
+      - "7016:7016"
+    volumes:
+      - ./llm-tools-db:/app/db
+      - ./logs/llm-tools:/app/logs
+      - ./shared-files:/app/uploads
+    restart: unless-stopped
+    networks:
+      - llm-network
+
+  chat-with-pdf-poc:
+    build: ./chat-with-pdf-poc
+    container_name: docs_mcp
+    env_file:
+      - ./chat-with-pdf-poc/.env
+    ports:
+      - "8011:8011"
+    volumes:
+      - ./chat-with-pdf-db:/app/db
+      - ./chat-with-pdf-telemetry:/app/telemetry
+      - ./logs/pdf-poc:/app/logs
+      - ./shared-files:/app/files
+      - ./evaluations:/app/evaluations
+    restart: unless-stopped
+    networks:
+      - llm-network
+    depends_on:
+      - redis
+
+  redis:
+    image: "redis/redis-stack:latest"
+    container_name: "coxit_docs_redis"
+    expose:
+      - "6379"
+    volumes:
+      - ./redis-data:/data
+    restart: unless-stopped
+    networks:
+      - llm-network
+
+networks:
+  llm-network:
+    driver: bridge

@@ -8,7 +8,7 @@ VERSION = version("chat-with-pdf-poc")
 # openai_fs or local_fs
 PROCESSING_STRATEGY = "local_fs"
 # only for local_fs: redis or milvus
-SAVE_STRATEGY = "milvus"
+SAVE_STRATEGY = "redis"
 
 BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
 FILES_DIR = BASE_DIR / "files"

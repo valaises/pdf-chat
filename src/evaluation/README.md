@@ -79,7 +79,7 @@ docker exec -it docs_mcp bash
 ```
 Then
 ```sh
-EVAL_CHAT_ENDPOINT="http://llm_tools:7016/v1" EVAL_CHAT_ENDPOINT_API_KEY="lpak-XXX" python src/evaluation/main.py
+EVAL_CHAT_ENDPOINT="http://llm_tools:7016/v1" EVAL_CHAT_ENDPOINT_API_KEY="lpak-1tlvJrANLovVTCV0Z7GvnQ" python src/evaluation/main.py --dataset dataset-test-1
 ```
 Note: \ 
 please set your CHAT_ENDPOINT_API_KEY, leave EVAL_CHAT_ENDPOINT as is, replace dataset name

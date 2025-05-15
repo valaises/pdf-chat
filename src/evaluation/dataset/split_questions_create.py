@@ -126,17 +126,19 @@ Input Example:
 
 Output example:
 ```json
-[
-    [
-        "What are the manufacturers specified in the document?",
-        "Is XXX a valid manufacturer?"
-    ],
-    [
-        "What materials should be used for desks?",
-        "Is material XXX approved?",
-        "What options are there?",
+{
+    "questions": [
+        [
+            "What are the manufacturers specified in the document?",
+            "Is XXX a valid manufacturer?"
+        ],
+        [
+            "What materials should be used for desks?",
+            "Is material XXX approved?",
+            "What options are there?",
+        ]
     ]
-]
+}
 ```
 
 Input:

@@ -1,12 +1,11 @@
 import asyncio
 import time
-from typing import List, Optional, Set, Tuple, Dict
+from typing import List, Set, Tuple, Dict
 
-import openai
 from more_itertools import chunked
-from openai import OpenAI
 
 from core.globals import SAVE_STRATEGY
+from core.tools.tool_context import ToolContext
 from evaluation.stage3_evaluation.eval_utils import eval_file_path
 from evaluation.globals import SEMAPHORE_EMBEDDINGS_LIMIT, EMBEDDING_BATCH_SIZE
 from core.logger import info
@@ -17,8 +16,7 @@ from processing.local_fs.process_paragraphs import process_paragraphs_batch
 from processing.p_models import ParagraphData, ParagraphVectorData
 from processing.p_utils import generate_paragraph_id
 from telemetry.models import RequestResult
-from vectors.repositories.repo_milvus import MilvusRepository, collection_from_file_name
-from vectors.repositories.repo_redis import RedisRepository
+from vectors.repositories.repo_milvus import collection_from_file_name
 from vectors.save_strategies.save_milvus import save_vectors_to_milvus
 from vectors.save_strategies.save_redis import save_vectors_to_redis
 
@@ -77,17 +75,15 @@ def get_processed_paragraphs(ctx: WorkerContext, file: FileItem) -> Set[str]:
 
 def process_file_local(
         loop: asyncio.AbstractEventLoop,
-        client: OpenAI,
-        repo_redis: Optional[RedisRepository],
-        repo_milvus: Optional[MilvusRepository],
+        tool_context: ToolContext,
         paragraphs_list: List[ParagraphData],
         file: FileItem
 ):
     ctx = WorkerContext(
-        client=client,
+        client=tool_context.openai,
         loop=loop,
-        repo_redis=repo_redis,
-        repo_milvus=repo_milvus,
+        repo_redis=tool_context.redis_repository,
+        repo_milvus=tool_context.milvus_repository,
     )
 
     loop_n = 0
@@ -109,8 +105,7 @@ def process_file_local(
 
 def extract_and_process_files(
         loop: asyncio.AbstractEventLoop,
-        client: openai.OpenAI,
-        redis_repository, milvus_repository,
+        tool_context: ToolContext,
         eval_files: List[FileItem]
 ) -> Dict[str, List[ParagraphData]]:
     file_paragraphs = {file.file_name_orig: [] for file in eval_files}
@@ -134,7 +129,7 @@ def extract_and_process_files(
         info(f"FILE: {file.file_name_orig} EXTRACT: {time.time() - t0:.2f}s")
 
         t0 = time.time()
-        process_file_local(loop, client, redis_repository, milvus_repository, extracted_paragraphs, file)
+        process_file_local(loop, tool_context, extracted_paragraphs, file)
         info(f"FILE: {file.file_name_orig} PROCESS: {time.time() - t0:.2f}s")
 
     return file_paragraphs

@@ -7,10 +7,11 @@ from core.repositories.repo_files import FileItem
 from core.tools.tool_context import ToolContext
 from core.tools.tool_search_in_file import ToolSearchInFile
 from core.tools.tools import execute_tools
+from evaluation.dataset.dataset_init import DatasetEval
 from evaluation.globals import CHAT_MODEL, SEMAPHORE_CHAT_LIMIT
 from evaluation.metering import Metering, MeteringItem
 from evaluation.stage2_answers.ans_golden import SYSTEM
-from evaluation.questions import EvalQuestionCombined
+from evaluation.dataset.eval_questions_load import EvalQuestionCombined
 from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming, try_get_usage
 from openai_wrappers.types import ChatMessage, ChatMessageAssistant, ToolCall, ToolCallFunction, ChatMessageUser, \
     ChatMessageSystem
@@ -144,15 +145,14 @@ def produce_rag_answers(
         ctx: ToolContext,
         loop: asyncio.AbstractEventLoop,
         metering: Metering,
-        files: List[FileItem],
-        questions: List[EvalQuestionCombined],
+        dataset_eval: DatasetEval,
 ) -> Dict[str, Dict[int, List[ChatMessage]]]:
     results = {}
 
-    for file in files:
+    for file in dataset_eval.eval_files:
         max_iters = 5
         iters = 0
-        not_answered = questions.copy()
+        not_answered = dataset_eval.questions.copy()
         answers_for_doc: Dict[int, List[ChatMessage]] = {}
 
         while True:
@@ -162,7 +162,7 @@ def produce_rag_answers(
                 raise Exception(f"Failed to produce RAG answers: too many tries")
 
             answers_for_doc_iter: Dict[int, List[ChatMessage]] = loop.run_until_complete(
-                recursive_chat(ctx, metering, questions, file)
+                recursive_chat(ctx, metering, not_answered, file)
             )
 
             answers_for_doc.update(answers_for_doc_iter)

@@ -27,16 +27,44 @@ While you will see no error from such PDFs, you can manually inspect what really
 cat evaluations/XXXX/stage1_extraction/paragraphs_readable/XXX.txt
 ```
 
-## Evaluation Materials
+## Creating and Using a Dataset
 
-Evaluation consumes following inputs:
-1. PDF documents located at /assets/eval/*.pdf
-2. Question List located at /assets/questions_str.json
-3. Split Questions located at /assets/questions_split.json
+To evaluate a set of files with your questions, a Dataset must be created
 
-Question List is fixed for all documents -- means for each document fixed set of questions will be user for evaluation \
-As a Question in Question List is frequently a composite one -- contains multiple questions, therefore, for correct evaluation (Stage 3: Evaluation), we need to verify each question separately \
-Question List is AI-generated from Question List. Original Question List contains 19 questions, Split Questions -- 63 questions
+Dataset -- a directory with a custom name e.g. 'dataset-test-1'
+
+Dataset must have a following flat structure
+
+```text
+dataset-test-1
+    questions_str.json
+    pdf_file_0.pdf
+    ...
+    pdf_file_N.pdf
+```
+
+To evaluate a created dataset:
+1. Locate it in a `datasets` directory
+2. Specify dataset name (dir name e.g. dataset-test-1) when running evaluation: `-dat`, `--dataset`
+
+WHERE:
+questions_str.json -- a JSON with following structure: `List[str]`:
+```text
+[
+  "question_0",
+  ...,
+  "question_n"
+]
+```
+
+
+After you started at least 1 evaluation that uses this dataset, `.metadata` file will be created\
+this file preserves *.pdf names and checksums of questions, so dataset's content may no longer be changed
+
+In case if you modified dataset and started one more evaluation on it, expect to see an error.\
+You can either roll back changes made on dataset or circumvent deleting .metadata file.
+
+Warning: circumvention is not recommended as with dataset changed there will be no longer possible compare experiments 
 
 ## Execution
 
@@ -53,7 +81,8 @@ Then
 ```sh
 EVAL_CHAT_ENDPOINT="http://llm_tools:7016/v1" EVAL_CHAT_ENDPOINT_API_KEY="lpak-XXX" python src/evaluation/main.py
 ```
-Note: please set your CHAT_ENDPOINT_API_KEY, leave EVAL_CHAT_ENDPOINT as is
+Note: \ 
+please set your CHAT_ENDPOINT_API_KEY, leave EVAL_CHAT_ENDPOINT as is, replace dataset name
 
 After execution is completed, you may find results in `evaluations/XXXX`,\
 where XXXX is the biggest number

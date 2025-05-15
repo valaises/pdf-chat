@@ -9,7 +9,7 @@ from core.logger import exception, info
 from evaluation.globals import SEMAPHORE_EVAL_LIMIT, CHAT_EVAL_MODEL
 from evaluation.metering import Metering, MeteringItem
 from evaluation.stage3_evaluation.eval_utils import parse_model_output_json
-from evaluation.questions import EvalQuestionCombined
+from evaluation.dataset.eval_questions_load import EvalQuestionCombined
 from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming, try_get_usage
 from openai_wrappers.types import ChatMessage, ChatMessageUser
 
@@ -34,6 +34,7 @@ class QuestionEval(BaseModel):
                 not self.is_speculative and
                 self.is_confident
         )
+
 
 class EvaluationResult(BaseModel):
     answer: Optional[str] = None

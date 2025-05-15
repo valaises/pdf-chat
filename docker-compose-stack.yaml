@@ -58,6 +58,7 @@ services:
       - ./logs/pdf-poc:/app/logs
       - shared-files-volume:/app/files
       - ./evaluations:/app/evaluations
+      - ./datasets:/app/datasets
     restart: unless-stopped
     networks:
       - llm-network

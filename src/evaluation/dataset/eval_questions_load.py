@@ -1,10 +1,14 @@
 import json
+
 from typing import List, Any
 from pathlib import Path
 from pydantic import BaseModel
 
+from evaluation.dataset.dataset_metadata import DatasetFiles
+
 
 __all__ = ["load_combined_questions", "EvalQuestionCombined"]
+
 
 
 class EvalQuestion(BaseModel):
@@ -81,23 +85,25 @@ def load_questions_split(file_path: Path) -> List[EvalQuestionsSplit]:
     ]
 
 
-def load_combined_questions(text_file_path: Path, split_file_path: Path) -> List[EvalQuestionCombined]:
+def load_combined_questions(
+        dataset_files: DatasetFiles,
+) -> List[EvalQuestionCombined]:
     """
     Load both question text and split questions from separate JSON files and combine them.
     """
     # Load both question formats
-    text_questions = load_questions_str(text_file_path)
-    split_questions = load_questions_split(split_file_path)
+    str_questions = load_questions_str(dataset_files.questions_str_file)
+    split_questions = load_questions_split(dataset_files.questions_split_file)
 
     # Ensure we have the same number of questions in both files
-    if len(text_questions) != len(split_questions):
+    if len(str_questions) != len(split_questions):
         raise ValueError(
-            f"Mismatch in question counts: {len(text_questions)} texts vs {len(split_questions)} splits"
+            f"Mismatch in question counts: {len(str_questions)} texts vs {len(split_questions)} splits"
         )
 
     # Combine them into the new model
     combined_questions = []
-    for text_q, split_q in zip(text_questions, split_questions):
+    for text_q, split_q in zip(str_questions, split_questions):
         # Verify that IDs match
         if text_q.id != split_q.id:
             raise ValueError(f"Question ID mismatch: {text_q.id} vs {split_q.id}")

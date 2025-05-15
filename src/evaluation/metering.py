@@ -11,6 +11,7 @@ class MeteringItem(BaseModel):
 
 
 class Metering(BaseModel):
+    dataset_compose: Dict[str, MeteringItem] = Field(default_factory=dict)
     stage1: Dict[str, MeteringItem] = Field(default_factory=dict)
     stage2: Dict[str, MeteringItem] = Field(default_factory=dict)
     stage3: Dict[str, MeteringItem] = Field(default_factory=dict)

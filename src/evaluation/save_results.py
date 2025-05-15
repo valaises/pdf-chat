@@ -5,9 +5,10 @@ from typing import List, Tuple, Dict
 from pydantic import BaseModel
 
 from core.globals import EVALUATIONS_DIR, PROCESSING_STRATEGY, SAVE_STRATEGY
+from evaluation.dataset.dataset_init import DatasetEval
 from evaluation.globals import CHAT_MODEL, CHAT_EVAL_MODEL
 from evaluation.metering import Metering
-from evaluation.questions import EvalQuestionCombined
+from evaluation.dataset.eval_questions_load import EvalQuestionCombined
 from evaluation.stage3_evaluation.eval_collect_metrics import CategoryMetrics
 from evaluation.stage3_evaluation.llm_judge import EvaluationResult
 from openai_wrappers.types import ChatMessage
@@ -53,8 +54,7 @@ class EvalParams(BaseModel):
 def dump_eval_params(
         eval_dir: Path,
         eval_details: str,
-        eval_documents: List[FileItem],
-        questions: List[EvalQuestionCombined]
+        dataset_eval: DatasetEval,
 ):
     eval_params = EvalParams(
         description=eval_details,
@@ -62,16 +62,16 @@ def dump_eval_params(
         save_strategy=SAVE_STRATEGY,
         chat_model=CHAT_MODEL,
         chat_eval_model=CHAT_EVAL_MODEL,
-        eval_documents=[d.file_name_orig for d in eval_documents],
+        eval_documents=[d.file_name_orig for d in dataset_eval.eval_files],
     )
     eval_dir.joinpath("params.json").write_text(eval_params.model_dump_json(indent=2))
 
     eval_dir.joinpath("QID2Questions.json").write_text(
-        json.dumps({q.id: q.question_text for q in questions}, indent=2)
+        json.dumps({q.id: q.question_text for q in dataset_eval.questions}, indent=2)
     )
     questions_split_dicts = [
         {f"{q.id}_{qs.id}": qs.question}
-        for q in questions for qs in q.questions_split
+        for q in dataset_eval.questions for qs in q.questions_split
     ]
     eval_dir.joinpath("QID2QuestionsSplit.json").write_text(json.dumps(questions_split_dicts, indent=2))
 

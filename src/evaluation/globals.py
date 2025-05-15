@@ -1,6 +1,6 @@
 import os
 
-from core.globals import DB_DIR
+from core.globals import DB_DIR, BASE_DIR
 
 
 EVAL_USER_ID: int = 1337_8413211

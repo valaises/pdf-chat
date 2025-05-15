@@ -7,7 +7,7 @@ from core.logger import exception, info
 from core.repositories.repo_files import FileItem
 from evaluation.globals import CHAT_MODEL, SEMAPHORE_CHAT_LIMIT
 from evaluation.metering import Metering, MeteringItem
-from evaluation.questions import EvalQuestionCombined
+from evaluation.dataset.eval_questions_load import EvalQuestionCombined
 from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming, try_get_usage
 from processing.p_models import ParagraphData
 from openai_wrappers.types import ChatMessage, ChatMessageUser, ChatMessageSystem

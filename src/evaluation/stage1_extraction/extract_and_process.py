@@ -6,6 +6,7 @@ from more_itertools import chunked
 
 from core.globals import SAVE_STRATEGY
 from core.tools.tool_context import ToolContext
+from evaluation.dataset.dataset_metadata import DatasetFiles
 from evaluation.stage3_evaluation.eval_utils import eval_file_path
 from evaluation.globals import SEMAPHORE_EMBEDDINGS_LIMIT, EMBEDDING_BATCH_SIZE
 from core.logger import info
@@ -106,7 +107,8 @@ def process_file_local(
 def extract_and_process_files(
         loop: asyncio.AbstractEventLoop,
         tool_context: ToolContext,
-        eval_files: List[FileItem]
+        eval_files: List[FileItem],
+        dataset_files: DatasetFiles,
 ) -> Dict[str, List[ParagraphData]]:
     file_paragraphs = {file.file_name_orig: [] for file in eval_files}
 
@@ -114,7 +116,7 @@ def extract_and_process_files(
         info(f"FILE: {file.file_name_orig}")
         t0 = time.time()
         # should panic if error
-        extracted_paragraphs = get_file_paragraphs(file, eval_file_path(file))
+        extracted_paragraphs = get_file_paragraphs(file, dataset_files.dataset_dir.joinpath(file.file_name_orig))
         extracted_paragraphs = [
             ParagraphData(
                 page_n=p.page_n,

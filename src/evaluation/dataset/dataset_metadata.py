@@ -21,6 +21,7 @@ class DatasetMetadata(BaseModel):
 
 @dataclass
 class DatasetFiles:
+    dataset_dir: Path
     metadata_file: Path
     questions_str_file: Path
     questions_split_file: Path
@@ -28,6 +29,7 @@ class DatasetFiles:
     @classmethod
     def new(cls, args: CMDArgs) -> 'DatasetFiles':
         return DatasetFiles(
+            args.dataset_dir,
             args.dataset_dir.joinpath(".metadata.json"),
             args.dataset_dir.joinpath("questions_str.json"),
             args.dataset_dir.joinpath("questions_split.json")

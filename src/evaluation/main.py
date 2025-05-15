@@ -70,7 +70,7 @@ def main():
 
     loop = asyncio.new_event_loop()
     tool_context = compose_tool_context(loop)
-    dataset_eval = init_dataset_eval(
+    dataset_files, dataset_eval = init_dataset_eval(
         loop, tool_context.http_session, metering, args
     )
 
@@ -86,6 +86,7 @@ def main():
             loop,
             tool_context,
             dataset_eval.eval_files,
+            dataset_files,
         )
 
         file_paragraphs: List[Tuple[FileItem, List[ParagraphData]]] = [

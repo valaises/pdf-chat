@@ -2,7 +2,7 @@ import asyncio
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, List
+from typing import Iterator, List, Tuple
 
 from aiohttp import ClientSession
 
@@ -26,7 +26,7 @@ def init_dataset_eval(
         http_session: ClientSession,
         metering: Metering,
         args: CMDArgs,
-) -> DatasetEval:
+) -> Tuple[DatasetFiles, DatasetEval]:
     dataset_files = DatasetFiles.new(args)
 
     eval_files: Iterator[Path] = (
@@ -54,7 +54,7 @@ def init_dataset_eval(
 
     questions = load_combined_questions(dataset_files)
 
-    return DatasetEval(
+    return dataset_files, DatasetEval(
         eval_files=eval_files,
         questions=questions
     )

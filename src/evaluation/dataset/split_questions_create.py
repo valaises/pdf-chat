@@ -138,11 +138,14 @@ Output example:
         [
             "What materials should be used for desks?",
             "Is material XXX approved?",
-            "What options are there?",
+            "What options for materials are mentioned?",
         ]
     ]
 }
 ```
+
+Make each subquestion in output to always end with a "?" 
+Subquestion must also be fully defined
 
 Input:
 %input%

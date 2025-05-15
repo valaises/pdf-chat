@@ -79,7 +79,7 @@ def main():
 
     eval_dir = get_next_evaluation_directory()
     eval_details = prompt_user_for_evaluation_details()
-    dump_eval_params(eval_dir, eval_details, dataset_eval)
+    dump_eval_params(eval_dir, eval_details, dataset_eval, dataset_files)
 
     try:
         file_paragraphs_dict = extract_and_process_files(

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from core.globals import EVALUATIONS_DIR, PROCESSING_STRATEGY, SAVE_STRATEGY
 from evaluation.dataset.dataset_init import DatasetEval
+from evaluation.dataset.dataset_metadata import DatasetFiles
 from evaluation.globals import CHAT_MODEL, CHAT_EVAL_MODEL
 from evaluation.metering import Metering
 from evaluation.dataset.eval_questions_load import EvalQuestionCombined
@@ -42,6 +43,7 @@ def get_next_evaluation_directory() -> Path:
 
 
 class EvalParams(BaseModel):
+    dataset_name: str
     description: str
     processing_strategy: str
     save_strategy: str
@@ -55,8 +57,10 @@ def dump_eval_params(
         eval_dir: Path,
         eval_details: str,
         dataset_eval: DatasetEval,
+        dataset_files: DatasetFiles,
 ):
     eval_params = EvalParams(
+        dataset_name=dataset_files.dataset_dir.name,
         description=eval_details,
         processing_strategy=PROCESSING_STRATEGY,
         save_strategy=SAVE_STRATEGY,

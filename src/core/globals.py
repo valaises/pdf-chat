@@ -25,5 +25,3 @@ DATASETS_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_DIR = BASE_DIR / "db"
 DB_DIR.mkdir(parents=True, exist_ok=True)
-
-ASSETS_DIR = BASE_DIR / "assets"

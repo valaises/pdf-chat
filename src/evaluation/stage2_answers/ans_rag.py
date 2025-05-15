@@ -124,7 +124,7 @@ async def recursive_chat(
         messages = [
             *init_messages,
             ChatMessageUser(
-                role="user", content=question.question_text
+                role="user", content=USER_MESSAGE.replace("%question%", question.question_text)
             )
         ]
         tasks.append(asyncio.create_task(
@@ -177,3 +177,13 @@ def produce_rag_answers(
 
     return results
 
+
+USER_MESSAGE = """
+I need you to answer a question:
+%question%
+
+To retrieve additional context that will help you to answer questions -- use tools.
+You can execute document search as many times as you need to answer question properly.
+It's OK to give negative answers -- if information can't be found -- confidently reply that document does not provide such information.
+
+"""

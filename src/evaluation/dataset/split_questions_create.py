@@ -42,7 +42,7 @@ def create_split_questions_if_not_exist(
 
     split_questions: SplitQuestions = compose_split_questions(loop, http_session, metering, question_str_json)
 
-    dataset_files.questions_split_file.write_text(split_questions.model_dump_json(indent=2))
+    dataset_files.questions_split_file.write_text(json.dumps(split_questions.questions, indent=2))
 
     verify_dataset_integrity_or_create_metadata(dataset_files, eval_files)
 

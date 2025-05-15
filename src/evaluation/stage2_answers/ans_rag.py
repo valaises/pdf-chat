@@ -184,6 +184,5 @@ I need you to answer a question:
 
 To retrieve additional context that will help you to answer questions -- use tools.
 You can execute document search as many times as you need to answer question properly.
-It's OK to give negative answers -- if information can't be found -- confidently reply that document does not provide such information.
-
+You need to respond with utmost confidence in your tone of voice
 """

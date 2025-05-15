@@ -7,7 +7,6 @@ from more_itertools import chunked
 from core.globals import SAVE_STRATEGY
 from core.tools.tool_context import ToolContext
 from evaluation.dataset.dataset_metadata import DatasetFiles
-from evaluation.stage3_evaluation.eval_utils import eval_file_path
 from evaluation.globals import SEMAPHORE_EMBEDDINGS_LIMIT, EMBEDDING_BATCH_SIZE
 from core.logger import info
 from core.repositories.repo_files import FileItem

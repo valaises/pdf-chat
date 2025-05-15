@@ -53,7 +53,8 @@ def create_split_questions_if_not_exist(
 async def compose_split_questions_worker(
         http_session: ClientSession,
         metering: Metering,
-        messages: List[ChatMessage]
+        messages: List[ChatMessage],
+        questions_cnt: int,
 ) -> Optional[SplitQuestions]:
     try:
         resp = await call_chat_completions_non_streaming(
@@ -71,6 +72,8 @@ async def compose_split_questions_worker(
 
         answer: str = resp["choices"][0]["message"]["content"]
         res: SplitQuestions = parse_model_output_json(answer, SplitQuestions)
+
+        assert len(res.questions) == questions_cnt
 
         return res
     except Exception as e:
@@ -102,7 +105,7 @@ def compose_split_questions(
             raise Exception("too many iters")
 
         result: Optional[SplitQuestions] = loop.run_until_complete(
-            compose_split_questions_worker(http_session, metering, messages)
+            compose_split_questions_worker(http_session, metering, messages, len(question_str_json))
         )
 
         iters += 1

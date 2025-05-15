@@ -1,4 +1,3 @@
-
 services:
   llm-chat:
     build:
@@ -41,7 +40,7 @@ services:
     volumes:
       - ./llm-tools-db:/app/db
       - ./logs/llm-tools:/app/logs
-      - ./shared-files:/app/uploads
+      - shared-files-volume:/app/uploads
     restart: unless-stopped
     networks:
       - llm-network
@@ -57,7 +56,7 @@ services:
       - ./chat-with-pdf-db:/app/db
       - ./chat-with-pdf-telemetry:/app/telemetry
       - ./logs/pdf-poc:/app/logs
-      - ./shared-files:/app/files
+      - shared-files-volume:/app/files
       - ./evaluations:/app/evaluations
     restart: unless-stopped
     networks:
@@ -79,3 +78,6 @@ services:
 networks:
   llm-network:
     driver: bridge
+
+volumes:
+  shared-files-volume:

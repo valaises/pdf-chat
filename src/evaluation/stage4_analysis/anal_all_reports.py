@@ -10,6 +10,7 @@ from core.logger import info
 from core.repositories.repo_files import FileItem
 from evaluation.metering import Metering
 from evaluation.stage4_analysis.anal_results import analyse_results_tasks
+from openai_wrappers.types import ChatMessageUser
 
 
 def analyse_all_reports(
@@ -36,7 +37,8 @@ def analyse_all_reports(
                     .replace("%constants%", json.dumps(constants, indent=2))
                     .replace("%overall_metrics%", json.dumps(comprehensive_answer_overall, indent=2))
                     .replace("%reports_per_file%", json.dumps(file_reports, indent=2)))
-    messages = [user_message]
+
+    messages = [ChatMessageUser(role="user", content=user_message)]
 
     max_iters = 5
     iters = 0

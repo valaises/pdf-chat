@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from core.globals import CONFIGS_DIR
 
-
+# todo: fix while dump into yaml, order gets sorted alphabetically
 class EvalConfig(BaseModel):
     __file_name: str = "eval_config.yaml"
     __file_path: Path = CONFIGS_DIR / __file_name

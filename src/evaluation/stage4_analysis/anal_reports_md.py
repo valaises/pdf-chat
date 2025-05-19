@@ -35,7 +35,7 @@ def analyse_reports_into_md(
         file_comprehensive_answer: str = comprehensive_answer["per_file"][file_name]
         file_passed_overall = passed_overall[file_name]
 
-        file_anal_text = (eval_dir /  "stage4_analysis" / "analysis_results" / file_name).read_text()
+        file_anal_text = (eval_dir /  "stage4_analysis" / "analysis_results" / Path(file_name).stem).with_suffix(".txt").read_text()
 
         user_message = (USER_MESSAGE
                         .replace("%analysis%", file_anal_text)

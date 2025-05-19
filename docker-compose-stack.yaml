@@ -20,9 +20,9 @@ services:
     container_name: llm_proxy
     environment:
      - LLM_PROXY_SECRET=secret
-     - OPENAI_API_KEY=
-     - GEMINI_API_KEY=
-     - ANTHROPIC_API_KEY =
+     - OPENAI_API_KEY=${OPENAI_API_KEY}
+     - GEMINI_API_KEY=${GEMINI_API_KEY}
+     - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}}
     ports:
       - "7012:7012"
     volumes:

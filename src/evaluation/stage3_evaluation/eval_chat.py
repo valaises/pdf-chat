@@ -3,8 +3,8 @@ from typing import List, Dict, Any, Optional
 
 from aiohttp import ClientSession
 
+from core.configs import EvalConfig
 from core.logger import error
-from evaluation.globals import CHAT_ENDPOINT_API_KEY, CHAT_ENDPOINT
 from openai_wrappers.types import ChatMessage
 
 
@@ -18,7 +18,8 @@ async def call_chat_completions_non_streaming(
         http_session: ClientSession,
         messages: List[ChatMessage],
         model: str,
-        tools: List[Dict[str, str]] = None
+        eval_config: EvalConfig,
+        tools: List[Dict[str, str]] = None,
 ):
     # Request payload with stream=False
     payload = {
@@ -34,11 +35,11 @@ async def call_chat_completions_non_streaming(
     # Headers including authorization
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {CHAT_ENDPOINT_API_KEY}"
+        "Authorization": f"Bearer {eval_config.chat_endpoint_api_key}"
     }
 
     async with http_session.post(
-            f"{CHAT_ENDPOINT}/chat/completions",
+            f"{eval_config.chat_endpoint}/chat/completions",
             json=payload,
             headers=headers
     ) as response:

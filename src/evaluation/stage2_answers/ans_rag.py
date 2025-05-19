@@ -2,13 +2,13 @@ import asyncio
 
 from typing import List, Dict, Any, Optional, Tuple
 
+from core.configs import EvalConfig
 from core.logger import info, exception
 from core.repositories.repo_files import FileItem
 from core.tools.tool_context import ToolContext
 from core.tools.tool_search_in_file import ToolSearchInFile
 from core.tools.tools import execute_tools
 from evaluation.dataset.dataset_init import DatasetEval
-from evaluation.globals import CHAT_MODEL, SEMAPHORE_CHAT_LIMIT
 from evaluation.metering import Metering, MeteringItem
 from evaluation.stage2_answers.ans_golden import SYSTEM
 from evaluation.dataset.eval_questions_load import EvalQuestionCombined
@@ -22,6 +22,7 @@ async def recursive_chat_worker(
         metering: Metering,
         messages: List[ChatMessage],
         question: EvalQuestionCombined,
+        eval_config: EvalConfig,
 ) -> Optional[Tuple[int, List[ChatMessage]]]:
     try:
         tools = [
@@ -42,12 +43,13 @@ async def recursive_chat_worker(
             resp = await call_chat_completions_non_streaming(
                 ctx.http_session,
                 messages,
-                CHAT_MODEL,
+                eval_config.chat_model,
+                eval_config,
                 tools,
             )
 
             usage = try_get_usage(resp)
-            metering_item = metering.stage2.setdefault(CHAT_MODEL, MeteringItem())
+            metering_item = metering.stage2.setdefault(eval_config.chat_model, MeteringItem())
             metering_item.requests_cnt += 1
             metering_item.messages_sent_cnt += len(messages)
             metering_item.tokens_in += usage.prompt_tokens
@@ -103,15 +105,22 @@ async def recursive_chat(
         metering: Metering,
         questions: List[EvalQuestionCombined],
         file: FileItem,
+        eval_config: EvalConfig,
 ):
-    semaphore = asyncio.Semaphore(SEMAPHORE_CHAT_LIMIT)
+    semaphore = asyncio.Semaphore(eval_config.semaphore_chat_limit)
 
     async def recursive_chat_with_semaphore(
             _messages: List[ChatMessage],
             _question: EvalQuestionCombined,
     ):
         async with semaphore:
-            return await recursive_chat_worker(ctx, metering, _messages, _question)
+            return await recursive_chat_worker(
+                ctx,
+                metering,
+                _messages,
+                _question,
+                eval_config,
+            )
 
     init_messages = [
         ChatMessageSystem(
@@ -146,6 +155,7 @@ def produce_rag_answers(
         loop: asyncio.AbstractEventLoop,
         metering: Metering,
         dataset_eval: DatasetEval,
+        eval_config: EvalConfig,
 ) -> Dict[str, Dict[int, List[ChatMessage]]]:
     results = {}
 
@@ -162,7 +172,13 @@ def produce_rag_answers(
                 raise Exception(f"Failed to produce RAG answers: too many tries")
 
             answers_for_doc_iter: Dict[int, List[ChatMessage]] = loop.run_until_complete(
-                recursive_chat(ctx, metering, not_answered, file)
+                recursive_chat(
+                    ctx,
+                    metering,
+                    not_answered,
+                    file,
+                    eval_config,
+                )
             )
 
             answers_for_doc.update(answers_for_doc_iter)

@@ -1,11 +1,8 @@
 import json
 import re
-from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
-
-from core.repositories.repo_files import FileItem
 
 
 def parse_model_output_json(output: str, parse_into: type[BaseModel]) -> Any:

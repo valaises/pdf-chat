@@ -49,22 +49,7 @@ cp chat-with-pdf-poc/docker-compose-stack.yaml docker-compose-stack.yaml
 
 specify environmental vars
 ```sh
-cp llm-proxy/.env.example llm-proxy/.env
-vim llm-proxy/.env
-# specify LLM_PROXY_SECRET = "secret"
-# specify OPENAI_API_KEY (mandatory)
-# specify GEMINI_API_KEY (recommended)
-```
-
-```sh
-cp llm-tools-server/.env.example llm-tools-server/.env
-vim llm-tools-server/.env
-# set LLM_PROXY_ADDRESS="http://localhost:7012/v1"
-```
-
-```sh
-cp chat-with-pdf-poc/.env.example chat-with-pdf-poc/.env
-vim chat-with-pdf-poc/.env
+vim docker-compose-stack.yaml
 ```
 
 Run Docker Compose Stack

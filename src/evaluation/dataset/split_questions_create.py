@@ -6,10 +6,10 @@ from typing import List, Optional
 from aiohttp import ClientSession
 from openai import BaseModel
 
+from core.configs import EvalConfig
 from core.logger import info, error
 from core.repositories.repo_files import FileItem
 from evaluation.dataset.dataset_metadata import verify_dataset_integrity_or_create_metadata, DatasetFiles
-from evaluation.globals import CHAT_EVAL_MODEL
 from evaluation.metering import Metering, MeteringItem
 from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming, try_get_usage
 from evaluation.stage3_evaluation.eval_utils import parse_model_output_json
@@ -26,6 +26,7 @@ def create_split_questions_if_not_exist(
         eval_files: List[FileItem],
         metering: Metering,
         dataset_files: DatasetFiles,
+        eval_config: EvalConfig,
 ):
     if dataset_files.questions_split_file.is_file():
         verify_dataset_integrity_or_create_metadata(dataset_files, eval_files)
@@ -40,7 +41,7 @@ def create_split_questions_if_not_exist(
     tokens_cnt = sum(len(item) / 4. for item in question_str_json)
     assert tokens_cnt < 16_000, f"too many tokens in questions_str.json: {tokens_cnt} > 16_000"
 
-    split_questions: SplitQuestions = compose_split_questions(loop, http_session, metering, question_str_json)
+    split_questions: SplitQuestions = compose_split_questions(loop, http_session, metering, question_str_json, eval_config)
 
     dataset_files.questions_split_file.write_text(json.dumps(split_questions.questions, indent=2))
 
@@ -55,16 +56,18 @@ async def compose_split_questions_worker(
         metering: Metering,
         messages: List[ChatMessage],
         questions_cnt: int,
+        eval_config: EvalConfig,
 ) -> Optional[SplitQuestions]:
     try:
         resp = await call_chat_completions_non_streaming(
             http_session,
             messages,
-            CHAT_EVAL_MODEL
+            eval_config.chat_eval_model,
+            eval_config,
         )
 
         usage = try_get_usage(resp)
-        metering_item = metering.dataset_compose.setdefault(CHAT_EVAL_MODEL, MeteringItem())
+        metering_item = metering.dataset_compose.setdefault(eval_config.chat_eval_model, MeteringItem())
         metering_item.requests_cnt += 1
         metering_item.messages_sent_cnt += len(messages)
         metering_item.tokens_in += usage.prompt_tokens
@@ -85,7 +88,8 @@ def compose_split_questions(
         loop: asyncio.AbstractEventLoop,
         http_session: ClientSession,
         metering: Metering,
-        question_str_json: List[str]
+        question_str_json: List[str],
+        eval_config: EvalConfig,
 ) -> SplitQuestions:
     max_iters = 5
     iters = 0
@@ -105,7 +109,13 @@ def compose_split_questions(
             raise Exception("too many iters")
 
         result: Optional[SplitQuestions] = loop.run_until_complete(
-            compose_split_questions_worker(http_session, metering, messages, len(question_str_json))
+            compose_split_questions_worker(
+                http_session,
+                metering,
+                messages,
+                len(question_str_json),
+                eval_config
+            )
         )
 
         iters += 1

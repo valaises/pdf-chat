@@ -3,9 +3,9 @@ from typing import Tuple, List, Dict, Optional
 
 from aiohttp import ClientSession
 
+from core.configs import EvalConfig
 from core.logger import exception, info
 from core.repositories.repo_files import FileItem
-from evaluation.globals import CHAT_MODEL, SEMAPHORE_CHAT_LIMIT
 from evaluation.metering import Metering, MeteringItem
 from evaluation.dataset.eval_questions_load import EvalQuestionCombined
 from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming, try_get_usage
@@ -27,15 +27,17 @@ async def golden_answers_worker(
         metering: Metering,
         messages: List[ChatMessage],
         question_id: int,
+        eval_config: EvalConfig,
 ) -> Optional[Tuple[int, str]]:
     try:
         resp = await call_chat_completions_non_streaming(
             http_session,
             messages,
-            CHAT_MODEL,
+            eval_config.chat_model,
+            eval_config,
         )
         usage = try_get_usage(resp)
-        metering_item = metering.stage2.setdefault(CHAT_MODEL, MeteringItem())
+        metering_item = metering.stage2.setdefault(eval_config.chat_model, MeteringItem())
         metering_item.requests_cnt += 1
         metering_item.messages_sent_cnt += len(messages)
         metering_item.tokens_in += usage.prompt_tokens
@@ -59,16 +61,23 @@ async def golden_answers_for_doc(
         http_session: ClientSession,
         metering: Metering,
         doc_text: str,
-        questions: List[EvalQuestionCombined]
+        questions: List[EvalQuestionCombined],
+        eval_config: EvalConfig,
 ) -> Dict[int, str]:
-    semaphore = asyncio.Semaphore(SEMAPHORE_CHAT_LIMIT)
+    semaphore = asyncio.Semaphore(eval_config.semaphore_chat_limit)
 
     async def golden_answers_with_semaphore(
             _messages: List[ChatMessage],
             question_id: int,
     ):
         async with semaphore:
-            return await golden_answers_worker(http_session, metering, _messages, question_id)
+            return await golden_answers_worker(
+                http_session,
+                metering,
+                _messages,
+                question_id,
+                eval_config,
+            )
 
     init_messages = [
         ChatMessageSystem(
@@ -103,7 +112,8 @@ def produce_golden_answers(
         http_session: ClientSession,
         metering: Metering,
         file_paragraphs: List[Tuple[FileItem, List[ParagraphData]]],
-        questions: List[EvalQuestionCombined]
+        questions: List[EvalQuestionCombined],
+        eval_config: EvalConfig,
 ) -> Dict[str, Dict[int, str]]:
     results = {}
 
@@ -126,7 +136,13 @@ def produce_golden_answers(
                 raise Exception(f"Failed to produce golden answers: too many tries")
 
             answers_for_doc_iter: Dict[int, str] = loop.run_until_complete(
-                golden_answers_for_doc(http_session, metering, doc_text, questions)
+                golden_answers_for_doc(
+                    http_session,
+                    metering,
+                    doc_text,
+                    questions,
+                    eval_config,
+                )
             )
             answers_for_doc.update(answers_for_doc_iter)
 

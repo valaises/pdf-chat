@@ -6,6 +6,7 @@ from typing import List, Tuple, Dict
 import aiohttp
 from openai import OpenAI
 
+from core.configs import EvalConfig
 from core.globals import DB_DIR, PROCESSING_STRATEGY, SAVE_STRATEGY
 from core.logger import init_logger, info
 from core.repositories.repo_files import FileItem, FilesRepository
@@ -66,12 +67,17 @@ def main():
     init_logger(False)
     info("Logger initialized")
 
+    eval_config = EvalConfig()
+    eval_config.read_from_disk()
+    assert eval_config.chat_endpoint
+    assert eval_config.chat_endpoint_api_key
+
     metering = Metering()
 
     loop = asyncio.new_event_loop()
     tool_context = compose_tool_context(loop)
     dataset_files, dataset_eval = init_dataset_eval(
-        loop, tool_context.http_session, metering, args
+        loop, tool_context.http_session, metering, args, eval_config
     )
 
     for file in dataset_eval.eval_files:
@@ -79,7 +85,7 @@ def main():
 
     eval_dir = get_next_evaluation_directory()
     eval_details = prompt_user_for_evaluation_details()
-    dump_eval_params(eval_dir, eval_details, dataset_eval, dataset_files)
+    dump_eval_params(eval_dir, eval_details, dataset_eval, dataset_files, eval_config)
 
     try:
         file_paragraphs_dict = extract_and_process_files(
@@ -87,6 +93,7 @@ def main():
             tool_context,
             dataset_eval.eval_files,
             dataset_files,
+            eval_config
         )
 
         file_paragraphs: List[Tuple[FileItem, List[ParagraphData]]] = [
@@ -95,10 +102,20 @@ def main():
         dump_stage1_extraction(eval_dir, file_paragraphs)
 
         golden_answers = produce_golden_answers(
-            loop, tool_context.http_session, metering, file_paragraphs, dataset_eval.questions
+            loop,
+            tool_context.http_session,
+            metering, file_paragraphs,
+            dataset_eval.questions,
+            eval_config,
         )
 
-        rag_results = produce_rag_answers(tool_context, loop, metering, dataset_eval)
+        rag_results = produce_rag_answers(
+            tool_context,
+            loop,
+            metering,
+            dataset_eval,
+            eval_config,
+        )
         rag_answers: Dict[str, Dict[int, str]] = {
             file_name: {
                 k: v[-1].content for k, v in fn_results.items()
@@ -107,10 +124,10 @@ def main():
         dump_stage2_answers(eval_dir, golden_answers, rag_results, rag_answers, dataset_eval.questions)
 
         eval_golden = evaluate_model_outputs(
-            loop, tool_context.http_session, metering, dataset_eval.questions, golden_answers
+            loop, tool_context.http_session, metering, dataset_eval.questions, golden_answers, eval_config
         )
         eval_rag = evaluate_model_outputs(
-            loop, tool_context.http_session, metering, dataset_eval.questions, rag_answers
+            loop, tool_context.http_session, metering, dataset_eval.questions, rag_answers, eval_config
         )
         dump_stage3_llm_judge(
             eval_dir, eval_golden, eval_rag, dataset_eval.questions
@@ -126,7 +143,7 @@ def main():
         # passed_overall_df = passed_overall_to_dataframe(eval_metrics)
 
         anal_results, anal_user_messages = analyse_results(
-            loop, tool_context.http_session, metering, eval_dir, dataset_eval.eval_files
+            loop, tool_context.http_session, metering, eval_dir, dataset_eval.eval_files, eval_config
         )
         dump_stage4_analysis(eval_dir, anal_results, anal_user_messages)
 

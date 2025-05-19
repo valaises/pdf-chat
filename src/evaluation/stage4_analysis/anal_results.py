@@ -5,9 +5,9 @@ from typing import List, Dict, Any, Tuple, Optional
 
 from aiohttp import ClientSession
 
+from core.configs import EvalConfig
 from core.logger import exception, info
 from core.repositories.repo_files import FileItem
-from evaluation.globals import SEMAPHORE_EVAL_LIMIT, CHAT_ANALYSE_MODEL
 from evaluation.metering import Metering, MeteringItem
 from evaluation.stage3_evaluation.eval_chat import call_chat_completions_non_streaming, try_get_usage
 from openai_wrappers.types import ChatMessageUser, ChatMessage
@@ -17,17 +17,19 @@ async def analyse_results_tasks_worker(
         http_session: ClientSession,
         metering: Metering,
         messages: List[ChatMessage],
-        file_name: str
+        file_name: str,
+        eval_config: EvalConfig,
 ) -> Optional[Tuple[str, str]]:
     try:
         resp = await call_chat_completions_non_streaming(
             http_session,
             messages,
-            CHAT_ANALYSE_MODEL
+            eval_config.chat_analyse_model,
+            eval_config,
         )
 
         usage = try_get_usage(resp)
-        metering_item = metering.stage4.setdefault(CHAT_ANALYSE_MODEL, MeteringItem())
+        metering_item = metering.stage4.setdefault(eval_config.chat_analyse_model, MeteringItem())
         metering_item.requests_cnt += 1
         metering_item.messages_sent_cnt += len(messages)
         metering_item.tokens_in += usage.prompt_tokens
@@ -44,16 +46,23 @@ async def analyse_results_tasks_worker(
 async def analyse_results_tasks(
         http_session: ClientSession,
         metering: Metering,
-        tasks: List[Dict[str, Any]]
+        tasks: List[Dict[str, Any]],
+        eval_config: EvalConfig,
 ) -> Dict[str, str]:
-    semaphore = asyncio.Semaphore(SEMAPHORE_EVAL_LIMIT)
+    semaphore = asyncio.Semaphore(eval_config.semaphore_eval_limit)
 
     async def analyse_results_with_semaphore(
             _messages: List[ChatMessage],
             file_name: str
     ):
         async with semaphore:
-            return await analyse_results_tasks_worker(http_session, metering, _messages, file_name)
+            return await analyse_results_tasks_worker(
+                http_session,
+                metering,
+                _messages,
+                file_name,
+                eval_config
+            )
 
     tasks_to_process = [
         asyncio.create_task(
@@ -74,7 +83,8 @@ def analyse_results(
         http_session: ClientSession,
         metering: Metering,
         eval_dir: Path,
-        eval_files: List[FileItem]
+        eval_files: List[FileItem],
+        eval_config: EvalConfig,
 ):
     comprehensive_answer_json = eval_dir / "stage3_evaluation" / "metrics" / "comprehensive_answer.json"
     comprehensive_answer: Dict[str, Any] = json.loads(comprehensive_answer_json.read_text())
@@ -123,7 +133,12 @@ def analyse_results(
             raise Exception("Failed to analyse_results: too many tries")
 
         results_local: Dict[str, str] = loop.run_until_complete(
-            analyse_results_tasks(http_session, metering, tasks)
+            analyse_results_tasks(
+                http_session,
+                metering,
+                tasks,
+                eval_config,
+            )
         )
         results.update(results_local)
         tasks = [t for t in tasks if t["file_name"] not in results]

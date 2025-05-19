@@ -5,8 +5,8 @@ from typing import List, Dict, Optional, Tuple
 from aiohttp import ClientSession
 from pydantic import BaseModel
 
+from core.configs import EvalConfig
 from core.logger import exception, info
-from evaluation.globals import SEMAPHORE_EVAL_LIMIT, CHAT_EVAL_MODEL
 from evaluation.metering import Metering, MeteringItem
 from evaluation.stage3_evaluation.eval_utils import parse_model_output_json
 from evaluation.dataset.eval_questions_load import EvalQuestionCombined
@@ -47,16 +47,18 @@ async def evaluate_answer_worker(
         messages: List[ChatMessage],
         question_id: int,
         orig_answer: str,
+        eval_config: EvalConfig,
 ) -> Optional[Tuple[int, EvaluationResult]]:
     try:
         resp = await call_chat_completions_non_streaming(
             http_session,
             messages,
-            CHAT_EVAL_MODEL
+            eval_config.chat_eval_model,
+            eval_config,
         )
 
         usage = try_get_usage(resp)
-        metering_item = metering.stage3.setdefault(CHAT_EVAL_MODEL, MeteringItem())
+        metering_item = metering.stage3.setdefault(eval_config.chat_eval_model, MeteringItem())
         metering_item.requests_cnt += 1
         metering_item.messages_sent_cnt += len(messages)
         metering_item.tokens_in += usage.prompt_tokens
@@ -77,16 +79,24 @@ async def evaluate_answers_for_doc(
         metering: Metering,
         questions: List[EvalQuestionCombined],
         doc_answers: Dict[int, str],
+        eval_config: EvalConfig,
 ) -> Dict[int, EvaluationResult]:
-    semaphore = asyncio.Semaphore(SEMAPHORE_EVAL_LIMIT)
+    semaphore = asyncio.Semaphore(eval_config.semaphore_eval_limit)
 
     async def evaluate_answer_with_semaphore(
             _messages: List[ChatMessage],
             question_id: int,
-            answer: str,
+            _answer: str,
     ):
         async with semaphore:
-            return await evaluate_answer_worker(http_session, metering, _messages, question_id, answer)
+            return await evaluate_answer_worker(
+                http_session,
+                metering,
+                _messages,
+                question_id,
+                _answer,
+                eval_config,
+            )
 
     tasks = []
     for question in questions:
@@ -123,7 +133,8 @@ def evaluate_model_outputs(
         http_session: ClientSession,
         metering: Metering,
         questions: List[EvalQuestionCombined],
-        answers: Dict[str, Dict[int, str]]
+        answers: Dict[str, Dict[int, str]],
+        eval_config: EvalConfig,
 ):
     results = {}
 
@@ -143,7 +154,13 @@ def evaluate_model_outputs(
                 raise Exception("Failed to eval: too many tries")
 
             eval_results_for_doc_iter: Dict[int, EvaluationResult] = loop.run_until_complete(
-                evaluate_answers_for_doc(http_session, metering, questions, not_answered)
+                evaluate_answers_for_doc(
+                    http_session,
+                    metering,
+                    questions,
+                    not_answered,
+                    eval_config,
+                )
             )
             eval_results_for_doc.update(eval_results_for_doc_iter)
 

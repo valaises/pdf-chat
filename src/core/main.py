@@ -2,7 +2,8 @@ import asyncio
 
 import uvloop
 
-from core.globals import BASE_DIR, FILES_DIR, SAVE_STRATEGY, PROCESSING_STRATEGY, DB_DIR
+from core.configs import EvalConfig
+from core.globals import FILES_DIR, SAVE_STRATEGY, PROCESSING_STRATEGY, DB_DIR
 from core.logger import init_logger, info
 from core.app import App
 from core.repositories.repo_files import FilesRepository
@@ -18,6 +19,10 @@ from vectors.repositories.repo_redis import RedisRepository
 def main():
     init_logger(True)
     info("Logger initialized")
+
+    eval_config = EvalConfig()
+    if not eval_config.exists():
+        eval_config.save_to_disk()
 
     files_repository = FilesRepository(DB_DIR / "files.db")
     redis_repository = None
@@ -63,7 +68,7 @@ def main():
     server = Server(
         app=app,
         host="0.0.0.0",
-        port=8011, # todo: use env values
+        port=8011,
         workers=[
             watchdog_worker,
             doc_e_worker,

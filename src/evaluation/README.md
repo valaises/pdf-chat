@@ -24,7 +24,7 @@ Currently, only locally stored embeddings are supported: Redis and Milvus, OpenA
 Not all PDFs are extracted correctly. Some of them are extracted only partially, which causes some chaos in metrics.\
 While you will see no error from such PDFs, you can manually inspect what really was extracted from your document:
 ```sh
-cat evaluations/XXXX/stage1_extraction/paragraphs_readable/XXX.txt
+cat chat-with-pdf/evaluations/XXXX/stage1_extraction/paragraphs_readable/XXX.txt
 ```
 
 ## Creating and Using a Dataset
@@ -72,6 +72,14 @@ Evaluation MUST be run INSIDE a container where actual Chat-with-pdf server runs
 As it inserts data, such as paragraphs and embeddings into DB, which is accessed during Stage 2: Answers Generation,\
 where model makes calls to LLM_ENDPOINT=llmtools, which calls Chat-with-pdf server. 
 
+First, edit evaluation config\
+specify API key e.g. `lpak-1tlvJrANLovVTCV0Z7GvnQ` \
+if needed, alter model_names
+
+```sh
+vim chat-with-pdf/configs/eval_config.yaml
+```
+
 To execute evaluation, run the following commands:
 
 ```sh
@@ -79,12 +87,11 @@ docker exec -it docs_mcp bash
 ```
 Then
 ```sh
-EVAL_CHAT_ENDPOINT="http://llm_tools:7016/v1" EVAL_CHAT_ENDPOINT_API_KEY="lpak-1tlvJrANLovVTCV0Z7GvnQ" python src/evaluation/main.py --dataset dataset-test-1
+python src/evaluation/main.py --dataset dataset-test-1
 ```
-Note: \ 
-please set your CHAT_ENDPOINT_API_KEY, leave EVAL_CHAT_ENDPOINT as is, replace dataset name
+Note: replace `--dataset` with your own dataset name 
 
-After execution is completed, you may find results in `evaluations/XXXX`,\
+After execution is completed, you may find results in `chat-with-pdf/evaluations/XXXX`,\
 where XXXX is the biggest number
 
 ## Approach Description
@@ -107,7 +114,7 @@ After paragraphs are extracted and embeddings are fetched using cloud-hosted mod
 DB will vary upon user's config, currently there's an option of 2: redis or milvus, where milvus is currently recommended.
 
 When everything is extracted, fetched and inserted, Stage 1: Extraction is complete. \
-Deliverables of Stage: Extraction are located under `evaluations/XXX/stage1_extraction` for analysis when needed.
+Deliverables of Stage: Extraction are located under `chat-with-pdf/evaluations/XXXX/stage1_extraction` for analysis when needed.
 
 ### Answers Generation
 
@@ -158,7 +165,7 @@ Assistant: Here's Answer based on a context you gave me...
 ```
 
 When for each document in initial set of documents we 2 set of answers: Golden and Predicted, Phase 2: Answers Generation is complete.\
-Deliverables of Phase 2: Answers Generation are located upon `evaluations/XXXX/stage2_answers` for examination when needed.
+Deliverables of Phase 2: Answers Generation are located upon `chat-with-pdf/evaluations/XXXX/stage2_answers` for examination when needed.
 
 There are 3 directories in `stage2_answers`:
 1. Golden Answers: Golden Answers. grouped per file
@@ -280,7 +287,7 @@ The difference may likely be caused by random variation in test samples rather t
 
 When set of Golden Answers, and Predicted (RAG) Answers is labeled using LLM model, and evaluated using metrics, and CIs are calculated, 
 Phase 3: Evaluation is complete. \
-Deliverables of this phase are located upon: `evaluations/XXXX/stage3_evaluation`
+Deliverables of this phase are located upon: `chat-with-pdf/evaluations/XXXX/stage3_evaluation`
 
 There are 2 subdirectories:
 1. LLM Judge -- logs for a step when labels are applied to Golden and Predicted Answers. Those logs are used in Stage 4: Analysis
@@ -317,7 +324,7 @@ is barely possible and not a good practice overall.
 
 When for each file we receive a report, Stage 4: Analysis is said to be complete.\
 It's worth to mention, that along all steps we've been collected model usage,\ 
-which is presented at `evaluations/XXXX/metering.json`:
+which is presented at `chat-with-pdf/evaluations/XXXX/metering.json`:
 ```json
 {
   "stage1": {},
@@ -354,7 +361,7 @@ Tokens count is received when completion request is complete from Cloud Provider
 We do not provide total price in dollars as we don't store pricing for each model in this repository.\
 However, a simple script with that data can be used to sum up tokens and calculate a total amount.
 
-Stage 4: Analysis produces deliverables located at `evaluations/XXXX/stage4_analysis`\
+Stage 4: Analysis produces deliverables located at `chat-with-pdf/evaluations/XXXX/stage4_analysis`\
 There are 2 subdirectories:
 1. Analysis Results -- *.txt reports for each document
 2. User Messages -- messages and context that model received as an input to generate report, for user examination if needed.

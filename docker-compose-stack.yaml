@@ -18,12 +18,15 @@ services:
   llm-proxy:
     build: ./llm-proxy
     container_name: llm_proxy
-    env_file:
-      - ./llm-proxy/.env
+    environment:
+     - LLM_PROXY_SECRET=secret
+     - OPENAI_API_KEY=
+     - GEMINI_API_KEY=
+#     - ANTHROPIC_API_KEY =
     ports:
       - "7012:7012"
     volumes:
-      - ./llm-proxy-db:/app/db
+      - llm-proxy-db-volume:/app/db
     restart: unless-stopped
     networks:
       - llm-network
@@ -31,14 +34,12 @@ services:
   llm-tools-server:
     build: ./llm-tools-server
     container_name: llm_tools
-    env_file:
-      - ./llm-tools-server/.env
     environment:
-      - LLM_PROXY_ADDRESS=http://llm-proxy:7012/v1
+      - LLM_PROXY_ADDRESS=http://llm-proxy:7012/v1 # don't change
     ports:
       - "7016:7016"
     volumes:
-      - ./llm-tools-db:/app/db
+      - llm-tool-db-volume:/app/db
       - ./logs/llm-tools:/app/logs
       - shared-files-volume:/app/uploads
     restart: unless-stopped
@@ -48,17 +49,24 @@ services:
   chat-with-pdf-poc:
     build: ./chat-with-pdf-poc
     container_name: docs_mcp
+    environment:
+      - PROCESSING_STRATEGY=local_fs # openai_fs or local_fs
+      - SAVE_STRATEGY=milvus # only for local_fs: redis or milvus, else -> ""
+      - OPENAI_API_KEY= # for embeddings
+      - EMBEDDING_MODEL=text-embedding-3-small # only for local_fs
+
     env_file:
       - ./chat-with-pdf-poc/.env
     ports:
       - "8011:8011"
     volumes:
-      - ./chat-with-pdf-db:/app/db
-      - ./chat-with-pdf-telemetry:/app/telemetry
-      - ./logs/pdf-poc:/app/logs
+      - ./chat-with-pdf/telemetry:/app/telemetry
+      - ./chat-with-pdf/configs:/app/configs
+      - ./logs/chat-with-pdf:/app/logs
+      - ./chat-with-pdf/evaluations:/app/evaluations
+      - ./chat-with-pdf/datasets:/app/datasets
       - shared-files-volume:/app/files
-      - ./evaluations:/app/evaluations
-      - ./datasets:/app/datasets
+      - chat-with-pdf-db-volume:/app/db
     restart: unless-stopped
     networks:
       - llm-network
@@ -71,7 +79,7 @@ services:
     expose:
       - "6379"
     volumes:
-      - ./redis-data:/data
+      - redis-data-volume:/data
     restart: unless-stopped
     networks:
       - llm-network
@@ -81,4 +89,8 @@ networks:
     driver: bridge
 
 volumes:
+  llm-proxy-db-volume:
+  llm-tool-db-volume:
+  chat-with-pdf-db-volume:
   shared-files-volume:
+  redis-data-volume:

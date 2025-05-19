@@ -6,6 +6,7 @@ from typing import Iterator, List, Tuple
 
 from aiohttp import ClientSession
 
+from core.configs import EvalConfig
 from core.repositories.repo_files import FileItem
 from evaluation.args import CMDArgs
 from evaluation.dataset.dataset_metadata import DatasetFiles
@@ -26,6 +27,7 @@ def init_dataset_eval(
         http_session: ClientSession,
         metering: Metering,
         args: CMDArgs,
+        eval_config: EvalConfig,
 ) -> Tuple[DatasetFiles, DatasetEval]:
     dataset_files = DatasetFiles.new(args)
 
@@ -49,7 +51,7 @@ def init_dataset_eval(
         raise Exception(f"{dataset_files.questions_str_file} does not exist")
 
     create_split_questions_if_not_exist(
-        loop, http_session, eval_files, metering, dataset_files
+        loop, http_session, eval_files, metering, dataset_files, eval_config
     )
 
     questions = load_combined_questions(dataset_files)

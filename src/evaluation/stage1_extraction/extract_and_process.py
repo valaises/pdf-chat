@@ -4,10 +4,10 @@ from typing import List, Set, Tuple, Dict
 
 from more_itertools import chunked
 
+from core.configs import EvalConfig
 from core.globals import SAVE_STRATEGY
 from core.tools.tool_context import ToolContext
 from evaluation.dataset.dataset_metadata import DatasetFiles
-from evaluation.globals import SEMAPHORE_EMBEDDINGS_LIMIT, EMBEDDING_BATCH_SIZE
 from core.logger import info
 from core.repositories.repo_files import FileItem
 from core.workers.w_extractor import get_file_paragraphs
@@ -25,8 +25,9 @@ async def process_file_paragraphs(
         ctx: WorkerContext,
         file: FileItem,
         paragraphs_list: List[ParagraphData],
+        eval_config: EvalConfig,
 ):
-    semaphore = asyncio.Semaphore(SEMAPHORE_EMBEDDINGS_LIMIT)
+    semaphore = asyncio.Semaphore(eval_config.semaphore_embeddings_limit)
 
     async def process_paragraphs_batch_with_semaphore(
             _paragraphs: List[ParagraphData]
@@ -35,7 +36,7 @@ async def process_file_paragraphs(
             return await process_paragraphs_batch(ctx, file, _paragraphs)
 
     tasks = []
-    for data_dict_batch in chunked(paragraphs_list, EMBEDDING_BATCH_SIZE):
+    for data_dict_batch in chunked(paragraphs_list, eval_config.embedding_batch_size):
         tasks.append(asyncio.create_task(
             process_paragraphs_batch_with_semaphore(data_dict_batch)
         ))
@@ -77,7 +78,8 @@ def process_file_local(
         loop: asyncio.AbstractEventLoop,
         tool_context: ToolContext,
         paragraphs_list: List[ParagraphData],
-        file: FileItem
+        file: FileItem,
+        eval_config: EvalConfig,
 ):
     ctx = WorkerContext(
         client=tool_context.openai,
@@ -98,7 +100,7 @@ def process_file_local(
 
         info(f"LOOP {loop_n}: TASKS_CNT: {len(tasks)}")
         loop.run_until_complete(
-            process_file_paragraphs(ctx, file, tasks)
+            process_file_paragraphs(ctx, file, tasks, eval_config)
         )
         loop_n += 1
 
@@ -108,6 +110,7 @@ def extract_and_process_files(
         tool_context: ToolContext,
         eval_files: List[FileItem],
         dataset_files: DatasetFiles,
+        eval_config: EvalConfig,
 ) -> Dict[str, List[ParagraphData]]:
     file_paragraphs = {file.file_name_orig: [] for file in eval_files}
 
@@ -115,7 +118,10 @@ def extract_and_process_files(
         info(f"FILE: {file.file_name_orig}")
         t0 = time.time()
         # should panic if error
-        extracted_paragraphs = get_file_paragraphs(file, dataset_files.dataset_dir.joinpath(file.file_name_orig))
+        extracted_paragraphs = get_file_paragraphs(
+            file,
+            dataset_files.dataset_dir.joinpath(file.file_name_orig),
+        )
         extracted_paragraphs = [
             ParagraphData(
                 page_n=p.page_n,
@@ -130,7 +136,13 @@ def extract_and_process_files(
         info(f"FILE: {file.file_name_orig} EXTRACT: {time.time() - t0:.2f}s")
 
         t0 = time.time()
-        process_file_local(loop, tool_context, extracted_paragraphs, file)
+        process_file_local(
+            loop,
+            tool_context,
+            extracted_paragraphs,
+            file,
+            eval_config,
+        )
         info(f"FILE: {file.file_name_orig} PROCESS: {time.time() - t0:.2f}s")
 
     return file_paragraphs

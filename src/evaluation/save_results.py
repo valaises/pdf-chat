@@ -4,10 +4,10 @@ from typing import List, Tuple, Dict
 
 from pydantic import BaseModel
 
+from core.configs import EvalConfig
 from core.globals import EVALUATIONS_DIR, PROCESSING_STRATEGY, SAVE_STRATEGY
 from evaluation.dataset.dataset_init import DatasetEval
 from evaluation.dataset.dataset_metadata import DatasetFiles
-from evaluation.globals import CHAT_MODEL, CHAT_EVAL_MODEL
 from evaluation.metering import Metering
 from evaluation.dataset.eval_questions_load import EvalQuestionCombined
 from evaluation.stage3_evaluation.eval_collect_metrics import CategoryMetrics
@@ -58,14 +58,15 @@ def dump_eval_params(
         eval_details: str,
         dataset_eval: DatasetEval,
         dataset_files: DatasetFiles,
+        eval_config: EvalConfig,
 ):
     eval_params = EvalParams(
         dataset_name=dataset_files.dataset_dir.name,
         description=eval_details,
         processing_strategy=PROCESSING_STRATEGY,
         save_strategy=SAVE_STRATEGY,
-        chat_model=CHAT_MODEL,
-        chat_eval_model=CHAT_EVAL_MODEL,
+        chat_model=eval_config.chat_model,
+        chat_eval_model=eval_config.chat_eval_model,
         eval_documents=[d.file_name_orig for d in dataset_eval.eval_files],
     )
     eval_dir.joinpath("params.json").write_text(eval_params.model_dump_json(indent=2))

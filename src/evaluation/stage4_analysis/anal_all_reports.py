@@ -9,6 +9,7 @@ from core.configs import EvalConfig
 from core.logger import info
 from core.repositories.repo_files import FileItem
 from evaluation.metering import Metering
+from evaluation.stage3_evaluation.eval_utils import parse_language_block
 from evaluation.stage4_analysis.anal_results import analyse_results_tasks
 from openai_wrappers.types import ChatMessageUser
 
@@ -64,6 +65,8 @@ def analyse_all_reports(
         if not results:
             iters += 1
             continue
+
+        result = parse_language_block(result, ["markdown", "md"])
 
         return result, user_message
 

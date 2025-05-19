@@ -38,13 +38,14 @@ class EvalConfig(BaseModel):
             yaml.dump(config_dict, default_flow_style=False)
         )
 
-    @classmethod
-    def read_from_disk(cls) -> 'EvalConfig':
-        file_path = cls.__file_path
+    def read_from_disk(self) -> None:
+        """Update this config instance with values from disk."""
+        if not self.__file_path.exists():
+            raise Exception(f"{self.__file_path=} does not exist")
 
-        if not file_path.exists():
-            raise Exception(f"{file_path=} does not exist")
-
-        config_dict = yaml.safe_load(file_path.read_text())
+        config_dict = yaml.safe_load(self.__file_path.read_text())
         config_dict = {k: v for k, v in config_dict.items() if v is not None}
-        return cls(**config_dict)
+
+        # Update this instance with values from disk
+        for key, value in config_dict.items():
+            setattr(self, key, value)

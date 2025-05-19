@@ -111,9 +111,8 @@ how difficult -- reason for considering to put the file into the table
 why difficult -- potential explanation what caused the system perform bad on a file
 put in the table only the files system that have significantly lower metrics then the others 
 
-Most difficult questions for the system:
-<md table with columns: q_id e.g. 0_3, how_difficult, why_difficult; keep it brief>
-
 Recommendations:
 <if any, summarize recommendations, 1 paragraph tops>
+
+The .md you are writing is getting published on the site as is, so keep the style
 """

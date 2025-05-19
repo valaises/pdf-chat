@@ -15,13 +15,16 @@ from evaluation.args import parse_arguments
 from evaluation.dataset.dataset_init import init_dataset_eval
 from evaluation.metering import Metering
 from evaluation.save_results import get_next_evaluation_directory, dump_eval_params, dump_stage1_extraction, \
-    dump_stage2_answers, dump_stage3_llm_judge, dump_stage3_metrics, dump_metering, dump_stage4_analysis
+    dump_stage2_answers, dump_stage3_llm_judge, dump_stage3_metrics, dump_metering, dump_stage4_analysis, \
+    dump_stage4_anal_md, dump_stage4_anal_overall
 from evaluation.stage2_answers.ans_golden import produce_golden_answers
 from evaluation.stage3_evaluation.eval_collect_metrics import collect_eval_metrics
 from evaluation.stage3_evaluation.llm_judge import evaluate_model_outputs
 from evaluation.stage1_extraction.extract_and_process import extract_and_process_files
 from evaluation.globals import EVAL_USER_ID, DB_EVAL_DIR
 from evaluation.stage2_answers.ans_rag import produce_rag_answers
+from evaluation.stage4_analysis.anal_all_reports import analyse_all_reports
+from evaluation.stage4_analysis.anal_reports_md import analyse_reports_into_md
 from evaluation.stage4_analysis.anal_results import analyse_results
 from evaluation.tui import prompt_user_for_evaluation_details
 from processing.p_models import ParagraphData
@@ -146,6 +149,16 @@ def main():
             loop, tool_context.http_session, metering, eval_dir, dataset_eval.eval_files, eval_config
         )
         dump_stage4_analysis(eval_dir, anal_results, anal_user_messages)
+
+        anal_md, anal_md_user_messages = analyse_reports_into_md(
+            loop, tool_context.http_session, metering, eval_dir, dataset_eval.eval_files, eval_config
+        )
+        dump_stage4_anal_md(eval_dir, anal_md, anal_md_user_messages)
+
+        anal_overall_md, anal_overall_user = analyse_all_reports(
+            loop, tool_context.http_session, metering, eval_dir, dataset_eval.eval_files, eval_config
+        )
+        dump_stage4_anal_overall(eval_dir, anal_overall_md, anal_overall_user)
 
         dump_metering(eval_dir, metering)
 

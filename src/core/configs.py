@@ -17,7 +17,7 @@ class EvalConfig(BaseModel):
 
     chat_model: str = "gemini-2.0-flash"
     chat_eval_model: str = "gpt-4o"
-    chat_analyse_model: str = "gemini-2.0-flash"
+    chat_analyse_model: str = "claude-3.7-sonnet"
 
     semaphore_chat_limit: int = Field(default=10, ge=1, le=50)
     semaphore_eval_limit: int = Field(default=3, ge=1, le=50)

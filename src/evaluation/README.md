@@ -365,3 +365,9 @@ Stage 4: Analysis produces deliverables located at `chat-with-pdf/evaluations/XX
 There are 2 subdirectories:
 1. Analysis Results -- *.txt reports for each document
 2. User Messages -- messages and context that model received as an input to generate report, for user examination if needed.
+
+Big descriptive analysis along with metrics are transforming into brief, human-readable analyse reports in .md format,
+located at `chat-with-pdf/evaluations/XXXX/stage4_analysis/analysis_results_md`
+
+Those human-readable reports from all files in a dataset will then be consumed one more time by a model to generate a final report of the experiment
+located at `chat-with-pdf/evaluations/XXXX/analysis_overall.md`

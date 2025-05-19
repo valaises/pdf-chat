@@ -225,6 +225,35 @@ def dump_stage4_analysis(
         user_messages_dir.joinpath(Path(file_name).stem).with_suffix(".txt").write_text(user_message)
 
 
+def dump_stage4_anal_md(
+        eval_dir: Path,
+        anal_results: Dict[str, str],
+        anal_user_messages: Dict[str, str],
+):
+    s4_dir = eval_dir.joinpath("stage4_analysis")
+    anal_results_dir = s4_dir / "analysis_results_md"
+    anal_results_dir.mkdir(exist_ok=True, parents=True)
+    user_messages_dir = s4_dir / "user_messages_md"
+    user_messages_dir.mkdir(exist_ok=True, parents=True)
+
+    for file_name, analysis_result in anal_results.items():
+        anal_results_dir.joinpath(Path(file_name).stem).with_suffix(".md").write_text(analysis_result)
+
+    for file_name, user_message in anal_user_messages.items():
+        user_messages_dir.joinpath(Path(file_name).stem).with_suffix(".md").write_text(user_message)
+
+
+def dump_stage4_anal_overall(
+        eval_dir: Path,
+        anal_overall: str,
+        user_message: str,
+):
+    s4_dir = eval_dir.joinpath("stage4_analysis")
+    eval_dir.joinpath("analysis_overall.md").write_text(anal_overall)
+
+    s4_dir.joinpath("analysis_overall_user.md").write_text(user_message)
+
+
 def dump_metering(
         eval_dir: Path,
         metering: Metering,

@@ -55,8 +55,6 @@ services:
       - OPENAI_API_KEY= # for embeddings
       - EMBEDDING_MODEL=text-embedding-3-small # only for local_fs
 
-    env_file:
-      - ./chat-with-pdf-poc/.env
     ports:
       - "8011:8011"
     volumes:

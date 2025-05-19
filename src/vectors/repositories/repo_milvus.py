@@ -35,7 +35,7 @@ class SearchResult:
 
 
 def collection_from_file_name(file_name: str) -> str:
-    return Path(file_name).stem
+    return "_" + Path(file_name).stem
 
 
 class MilvusRepository:

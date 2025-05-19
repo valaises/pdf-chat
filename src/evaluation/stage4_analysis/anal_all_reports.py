@@ -52,7 +52,7 @@ def analyse_all_reports(
                 http_session,
                 metering,
                 [
-                    {"overall": messages}
+                    {"file_name": "overall", "messages": messages}
                 ],
                 eval_config,
             )

@@ -45,90 +45,88 @@ class ExperimentsRouter(APIRouter):
             <style>
                 body {
                     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                    line-height: 1.6;
+                    line-height: 1.4;
                     color: #333;
                     background-color: #f2f2f7;
                     margin: 0;
-                    padding: 20px;
+                    padding: 12px;
                 }
                 .container {
-                    max-width: 1000px;
+                    max-width: 900px;
                     margin: 0 auto;
-                    padding: 20px;
+                    padding: 10px;
                 }
                 h1 {
                     color: #333;
                     text-align: center;
-                    margin-bottom: 30px;
+                    margin-bottom: 20px;
                     font-weight: 500;
+                    font-size: 24px;
                 }
                 .experiments-list {
                     display: grid;
                     grid-template-columns: 1fr;
-                    gap: 16px;
+                    gap: 10px;
                 }
                 .experiment-card {
                     background-color: white;
-                    border-radius: 10px;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-                    padding: 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                    padding: 12px;
                     transition: transform 0.2s ease, box-shadow 0.2s ease;
                 }
                 .experiment-card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 }
                 .experiment-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    margin-bottom: 12px;
-                    border-bottom: 1px solid #eee;
-                    padding-bottom: 8px;
+                    margin-bottom: 6px;
                 }
                 .experiment-id {
                     font-weight: 600;
-                    font-size: 18px;
+                    font-size: 15px;
                     color: #333;
                 }
                 .dataset-pill {
                     display: inline-block;
                     background-color: #e8e8ed;
                     color: #666;
-                    padding: 4px 12px;
-                    border-radius: 16px;
-                    font-size: 14px;
+                    padding: 2px 8px;
+                    border-radius: 12px;
+                    font-size: 12px;
                     font-weight: 500;
                 }
                 .experiment-description {
-                    margin-bottom: 16px;
-                    font-size: 16px;
+                    margin-bottom: 8px;
+                    font-size: 14px;
+                    color: #555;
                 }
                 .experiment-details {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 12px;
-                    font-size: 14px;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    font-size: 12px;
                     color: #666;
                 }
                 .detail-item {
-                    display: flex;
-                    flex-direction: column;
+                    background-color: #f5f5f7;
+                    padding: 3px 8px;
+                    border-radius: 4px;
                 }
                 .detail-label {
                     font-weight: 500;
-                    margin-bottom: 4px;
                     color: #888;
-                }
-                .detail-value {
-                    color: #333;
+                    margin-right: 4px;
                 }
                 footer {
                     text-align: center;
-                    margin-top: 30px;
+                    margin-top: 20px;
                     color: #888;
-                    font-size: 14px;
-                    padding: 20px 0;
+                    font-size: 12px;
+                    padding: 10px 0;
                 }
             </style>
         </head>
@@ -149,20 +147,20 @@ class ExperimentsRouter(APIRouter):
                         <div class="experiment-description">{params.description}</div>
                         <div class="experiment-details">
                             <div class="detail-item">
-                                <div class="detail-label">Chat Model</div>
-                                <div class="detail-value">{params.chat_model}</div>
+                                <span class="detail-label">Chat:</span>
+                                <span>{params.chat_model}</span>
                             </div>
                             <div class="detail-item">
-                                <div class="detail-label">Evaluation Model</div>
-                                <div class="detail-value">{params.chat_eval_model}</div>
+                                <span class="detail-label">Eval:</span>
+                                <span>{params.chat_eval_model}</span>
                             </div>
                             <div class="detail-item">
-                                <div class="detail-label">Processing Strategy</div>
-                                <div class="detail-value">{params.processing_strategy}</div>
+                                <span class="detail-label">Processing:</span>
+                                <span>{params.processing_strategy}</span>
                             </div>
                             <div class="detail-item">
-                                <div class="detail-label">Save Strategy</div>
-                                <div class="detail-value">{params.save_strategy}</div>
+                                <span class="detail-label">Save:</span>
+                                <span>{params.save_strategy}</span>
                             </div>
                         </div>
                     </div>

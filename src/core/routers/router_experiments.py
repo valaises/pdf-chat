@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter
+from fastapi.responses import HTMLResponse
 
 from core.globals import EVALUATIONS_DIR
 from core.logger import error
@@ -34,6 +35,26 @@ class ExperimentsRouter(APIRouter):
 
         # Sort experiments by ID (which should be chronological)
         experiments.sort(key=lambda x: x["id"])
+
+        # Get unique datasets and assign colors
+        unique_datasets = set(exp["params"].dataset_name for exp in experiments)
+
+        # Function to generate a color based on dataset name
+        def get_dataset_color(dataset_name):
+            # Predefined colors - pastel and visually distinct
+            colors = [
+                "#FFD6A5", "#CAFFBF", "#9BF6FF", "#BDB2FF", "#FFC6FF",  # pastel
+                "#FDFFB6", "#A0C4FF", "#FFB5A7", "#D0F4DE", "#E4C1F9",  # more pastel
+                "#F8EDEB", "#F9C74F", "#90BE6D", "#43AA8B", "#577590",  # muted
+                "#F94144", "#F3722C", "#F8961E", "#F9C74F", "#90BE6D",  # warm to cool
+            ]
+
+            # Simple hash function to pick a color
+            hash_value = sum(ord(c) for c in dataset_name)
+            return colors[hash_value % len(colors)]
+
+        # Create a mapping of dataset names to colors
+        dataset_colors = {dataset: get_dataset_color(dataset) for dataset in unique_datasets}
 
         html_content = """
         <!DOCTYPE html>
@@ -92,12 +113,11 @@ class ExperimentsRouter(APIRouter):
                 }
                 .dataset-pill {
                     display: inline-block;
-                    background-color: #e8e8ed;
-                    color: #666;
                     padding: 2px 8px;
                     border-radius: 12px;
                     font-size: 12px;
                     font-weight: 500;
+                    color: rgba(0, 0, 0, 0.7);
                 }
                 .experiment-description {
                     margin-bottom: 8px;
@@ -138,11 +158,14 @@ class ExperimentsRouter(APIRouter):
 
         for exp in experiments:
             params = exp["params"]
+            dataset_name = params.dataset_name
+            dataset_color = dataset_colors[dataset_name]
+
             html_content += f"""
                     <div class="experiment-card">
                         <div class="experiment-header">
                             <div class="experiment-id">{exp["id"]}</div>
-                            <div class="dataset-pill">{params.dataset_name}</div>
+                            <div class="dataset-pill" style="background-color: {dataset_color};">{dataset_name}</div>
                         </div>
                         <div class="experiment-description">{params.description}</div>
                         <div class="experiment-details">
@@ -174,5 +197,4 @@ class ExperimentsRouter(APIRouter):
         </html>
         """
 
-        from fastapi.responses import HTMLResponse
         return HTMLResponse(content=html_content)

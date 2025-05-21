@@ -32,6 +32,7 @@ class ExperimentsRouter(APIRouter):
             except Exception as e:
                 error(f"failed to load experiment: {d.name}. Error: {e}")
 
+        # Sort experiments by ID (which should be chronological)
         experiments.sort(key=lambda x: x["id"])
 
         html_content = """
@@ -45,103 +46,131 @@ class ExperimentsRouter(APIRouter):
                 body {
                     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                     line-height: 1.6;
-                    color: #353740;
-                    background-color: #f7f7f8;
+                    color: #333;
+                    background-color: #f2f2f7;
                     margin: 0;
                     padding: 20px;
                 }
                 .container {
-                    max-width: 1200px;
+                    max-width: 1000px;
                     margin: 0 auto;
-                    background-color: white;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
                     padding: 20px;
                 }
                 h1 {
-                    color: #10a37f;
+                    color: #333;
                     text-align: center;
                     margin-bottom: 30px;
+                    font-weight: 500;
                 }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 20px;
+                .experiments-list {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 16px;
                 }
-                th {
-                    background-color: #f0f0f0;
-                    padding: 12px;
-                    text-align: left;
-                    font-weight: 600;
-                    border-bottom: 2px solid #ddd;
+                .experiment-card {
+                    background-color: white;
+                    border-radius: 10px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    padding: 20px;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
                 }
-                td {
-                    padding: 12px;
+                .experiment-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }
+                .experiment-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 12px;
                     border-bottom: 1px solid #eee;
-                    vertical-align: top;
+                    padding-bottom: 8px;
                 }
-                tr:hover {
-                    background-color: #f9f9f9;
+                .experiment-id {
+                    font-weight: 600;
+                    font-size: 18px;
+                    color: #333;
                 }
                 .dataset-pill {
                     display: inline-block;
-                    background-color: #e9f7f2;
-                    color: #10a37f;
-                    padding: 4px 10px;
+                    background-color: #e8e8ed;
+                    color: #666;
+                    padding: 4px 12px;
                     border-radius: 16px;
                     font-size: 14px;
                     font-weight: 500;
                 }
-                .experiment-id {
-                    font-weight: 600;
-                    color: #444;
+                .experiment-description {
+                    margin-bottom: 16px;
+                    font-size: 16px;
+                }
+                .experiment-details {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 12px;
+                    font-size: 14px;
+                    color: #666;
+                }
+                .detail-item {
+                    display: flex;
+                    flex-direction: column;
+                }
+                .detail-label {
+                    font-weight: 500;
+                    margin-bottom: 4px;
+                    color: #888;
+                }
+                .detail-value {
+                    color: #333;
                 }
                 footer {
                     text-align: center;
                     margin-top: 30px;
                     color: #888;
                     font-size: 14px;
+                    padding: 20px 0;
                 }
             </style>
         </head>
         <body>
             <div class="container">
                 <h1>Experiments</h1>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Dataset</th>
-                            <th>Description</th>
-                            <th>Models</th>
-                            <th>Strategy</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div class="experiments-list">
         """
 
         for exp in experiments:
             params = exp["params"]
             html_content += f"""
-                        <tr>
-                            <td class="experiment-id">{exp["id"]}</td>
-                            <td><span class="dataset-pill">{params.dataset_name}</span></td>
-                            <td>{params.description}</td>
-                            <td>
-                                <div>Chat: {params.chat_model}</div>
-                                <div>Eval: {params.chat_eval_model}</div>
-                            </td>
-                            <td>
-                                <div>Processing: {params.processing_strategy}</div>
-                                <div>Save: {params.save_strategy}</div>
-                            </td>
-                        </tr>
+                    <div class="experiment-card">
+                        <div class="experiment-header">
+                            <div class="experiment-id">{exp["id"]}</div>
+                            <div class="dataset-pill">{params.dataset_name}</div>
+                        </div>
+                        <div class="experiment-description">{params.description}</div>
+                        <div class="experiment-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Chat Model</div>
+                                <div class="detail-value">{params.chat_model}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Evaluation Model</div>
+                                <div class="detail-value">{params.chat_eval_model}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Processing Strategy</div>
+                                <div class="detail-value">{params.processing_strategy}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Save Strategy</div>
+                                <div class="detail-value">{params.save_strategy}</div>
+                            </div>
+                        </div>
+                    </div>
             """
 
         html_content += """
-                    </tbody>
-                </table>
-                <footer>Made with ❤️ at COXIT</footer>
+                </div>
+                <footer>Made with ❤️ at Coxit</footer>
             </div>
         </body>
         </html>

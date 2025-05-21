@@ -1,3 +1,6 @@
+import os
+import datetime
+
 import json
 from pathlib import Path
 from typing import List
@@ -37,11 +40,17 @@ class ExperimentsRouter(APIRouter):
                         "accuracy": metrics_data["accuracy"]["value"]
                     }
 
+                # Get directory creation time
+                creation_time = os.path.getctime(d)
+                creation_date = datetime.datetime.fromtimestamp(creation_time)
+                formatted_date = creation_date.strftime("%Y-%m-%d %H:%M")
+
                 experiments.append({
                     "id": d.name,
                     "params": exp_params,
                     "completed": completed,
-                    "metrics": metrics
+                    "metrics": metrics,
+                    "created_at": formatted_date
                 })
             except Exception as e:
                 error(f"failed to load experiment: {d.name}. Error: {e}")
@@ -145,6 +154,11 @@ class ExperimentsRouter(APIRouter):
                     font-size: 14px;
                     color: #555;
                 }
+                .experiment-date {
+                    font-size: 12px;
+                    color: #888;
+                    margin-bottom: 8px;
+                }
                 .experiment-footer {
                     display: flex;
                     justify-content: space-between;
@@ -226,6 +240,7 @@ class ExperimentsRouter(APIRouter):
                                 </div>
                                 <div class="dataset-pill" style="background-color: {dataset_color};">{dataset_name}</div>
                             </div>
+                            <div class="experiment-date">Created: {exp["created_at"]}</div>
                             <div class="experiment-description">{params.description}</div>
                             <div class="experiment-footer">
                                 <div class="experiment-details">

@@ -229,32 +229,34 @@ class ExperimentsRouter(APIRouter):
             params_html = """
             <div class="section">
                 <div class="section-title">Experiment Parameters</div>
-                <table class="info-table">
-                    <tr>
-                        <th>Dataset</th>
-                        <td>{dataset_name}</td>
-                    </tr>
-                    <tr>
-                        <th>Description</th>
-                        <td>{description}</td>
-                    </tr>
-                    <tr>
-                        <th>Chat Model</th>
-                        <td>{chat_model}</td>
-                    </tr>
-                    <tr>
-                        <th>Evaluation Model</th>
-                        <td>{chat_eval_model}</td>
-                    </tr>
-                    <tr>
-                        <th>Processing Strategy</th>
-                        <td>{processing_strategy}</td>
-                    </tr>
-                    <tr>
-                        <th>Save Strategy</th>
-                        <td>{save_strategy}</td>
-                    </tr>
-                </table>
+                <div class="info-card">
+                    <table class="info-table">
+                        <tr>
+                            <th>Dataset</th>
+                            <td>{dataset_name}</td>
+                        </tr>
+                        <tr>
+                            <th>Description</th>
+                            <td>{description}</td>
+                        </tr>
+                        <tr>
+                            <th>Chat Model</th>
+                            <td>{chat_model}</td>
+                        </tr>
+                        <tr>
+                            <th>Evaluation Model</th>
+                            <td>{chat_eval_model}</td>
+                        </tr>
+                        <tr>
+                            <th>Processing Strategy</th>
+                            <td>{processing_strategy}</td>
+                        </tr>
+                        <tr>
+                            <th>Save Strategy</th>
+                            <td>{save_strategy}</td>
+                        </tr>
+                    </table>
+                </div>
             </div>
             """.format(
                 dataset_name=exp_params.dataset_name,
@@ -269,12 +271,14 @@ class ExperimentsRouter(APIRouter):
             documents_html = """
             <div class="section">
                 <div class="section-title">Evaluated Documents</div>
-                <ul>
+                <div class="documents-card">
+                    <ul class="documents-list">
             """
             for doc in exp_params.eval_documents:
                 documents_html += f"<li>{doc}</li>"
             documents_html += """
-                </ul>
+                    </ul>
+                </div>
             </div>
             """
 

@@ -264,7 +264,7 @@ body {
 }
 
 .collapsible.active .collapsible-content {
-    max-height: 2000px; /* Arbitrary large value */
+    /*max-height: 2000px; !* Arbitrary large value *!*/
     transition: max-height 0.5s ease-in;
 }
 

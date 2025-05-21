@@ -33,6 +33,17 @@ class ExperimentsRouter(APIRouter):
                 )
                 completed = d.joinpath("analysis_overall.md").exists()
                 metrics = {}
+                completion_time = None
+
+                import os
+                import datetime
+
+                # Get directory creation time
+                dir_creation_time = os.path.getctime(d)
+                creation_date = datetime.datetime.fromtimestamp(dir_creation_time)
+                formatted_date = creation_date.strftime("%Y-%m-%d %H:%M")
+
+                # Calculate completion time if experiment is completed
                 if completed:
                     metrics_file = d / "stage3_evaluation" / "metrics" / "comprehensive_answer.json"
                     metrics_data = json.loads(metrics_file.read_text())["overall"]
@@ -40,17 +51,27 @@ class ExperimentsRouter(APIRouter):
                         "accuracy": metrics_data["accuracy"]["value"]
                     }
 
-                # Get directory creation time
-                creation_time = os.path.getctime(d)
-                creation_date = datetime.datetime.fromtimestamp(creation_time)
-                formatted_date = creation_date.strftime("%Y-%m-%d %H:%M")
+                    analysis_file = d.joinpath("analysis_overall.md")
+                    analysis_creation_time = os.path.getctime(analysis_file)
+                    completion_minutes = (analysis_creation_time - dir_creation_time) / 60
+
+                    if completion_minutes < 60:
+                        completion_time = f"{int(completion_minutes)} min"
+                    else:
+                        completion_hours = completion_minutes / 60
+                        if completion_hours < 24:
+                            completion_time = f"{completion_hours:.1f} hours"
+                        else:
+                            completion_days = completion_hours / 24
+                            completion_time = f"{completion_days:.1f} days"
 
                 experiments.append({
                     "id": d.name,
                     "params": exp_params,
                     "completed": completed,
                     "metrics": metrics,
-                    "created_at": formatted_date
+                    "created_at": formatted_date,
+                    "completion_time": completion_time
                 })
             except Exception as e:
                 error(f"failed to load experiment: {d.name}. Error: {e}")
@@ -149,15 +170,32 @@ class ExperimentsRouter(APIRouter):
                     font-weight: 500;
                     color: rgba(0, 0, 0, 0.7);
                 }
-                .experiment-description {
+                .experiment-meta {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
                     margin-bottom: 8px;
-                    font-size: 14px;
-                    color: #555;
                 }
                 .experiment-date {
                     font-size: 12px;
                     color: #888;
+                }
+                .completion-time {
+                    font-size: 12px;
+                    color: #666;
+                    display: flex;
+                    align-items: center;
+                    background-color: #f5f5f7;
+                    padding: 2px 8px;
+                    border-radius: 12px;
+                }
+                .completion-emoji {
+                    margin-right: 4px;
+                }
+                .experiment-description {
                     margin-bottom: 8px;
+                    font-size: 14px;
+                    color: #555;
                 }
                 .experiment-footer {
                     display: flex;
@@ -219,6 +257,16 @@ class ExperimentsRouter(APIRouter):
             status_emoji = "✅" if exp["completed"] else "❌"
             status_title = "Completed" if exp["completed"] else "In Progress"
 
+            # Completion time display
+            completion_html = ""
+            if exp["completed"] and exp["completion_time"]:
+                completion_html = f"""
+                <div class="completion-time">
+                    <span class="completion-emoji">⏱️</span>
+                    <span>Completed in {exp["completion_time"]}</span>
+                </div>
+                """
+
             # Metrics display
             metrics_html = ""
             if exp["completed"] and "accuracy" in exp["metrics"]:
@@ -240,7 +288,10 @@ class ExperimentsRouter(APIRouter):
                                 </div>
                                 <div class="dataset-pill" style="background-color: {dataset_color};">{dataset_name}</div>
                             </div>
-                            <div class="experiment-date">Created: {exp["created_at"]}</div>
+                            <div class="experiment-meta">
+                                <div class="experiment-date">Created: {exp["created_at"]}</div>
+                                {completion_html}
+                            </div>
                             <div class="experiment-description">{params.description}</div>
                             <div class="experiment-footer">
                                 <div class="experiment-details">
@@ -276,6 +327,7 @@ class ExperimentsRouter(APIRouter):
         """
 
         return HTMLResponse(content=html_content)
+
 
     async def _experiment_detail(self, experiment_id: str):
         experiment_dir = EVALUATIONS_DIR / experiment_id

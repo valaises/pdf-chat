@@ -203,6 +203,15 @@ class ExperimentsRouter(APIRouter):
         if not experiment_dir.exists() or not experiment_dir.is_dir():
             raise HTTPException(status_code=404, detail=f"Experiment {experiment_id} not found")
 
+        per_file_md = {}
+        analysis_results_dir = experiment_dir / "stage4_analysis" / "analysis_results_md"
+        if analysis_results_dir.exists():
+            per_file_md = {
+                f.stem: f.read_text()
+                for f in analysis_results_dir.iterdir()
+                if f.is_file() and f.suffix == '.md'
+            }
+
         try:
             # Load experiment data
             exp_params = EvalParams.model_validate_json(
@@ -266,21 +275,6 @@ class ExperimentsRouter(APIRouter):
                 processing_strategy=exp_params.processing_strategy,
                 save_strategy=exp_params.save_strategy
             )
-
-            # Generate HTML for documents list
-            documents_html = """
-            <div class="section">
-                <div class="section-title">Evaluated Documents</div>
-                <div class="documents-card">
-                    <ul class="documents-list">
-            """
-            for doc in exp_params.eval_documents:
-                documents_html += f"<li>{doc}</li>"
-            documents_html += """
-                    </ul>
-                </div>
-            </div>
-            """
 
             # Generate HTML for metering data if available
             metering_html = ""
@@ -358,7 +352,38 @@ class ExperimentsRouter(APIRouter):
                 </div>
                 """
 
-            # Generate the full HTML content
+            # Generate HTML for per-file markdown content
+            per_file_html = ""
+            if per_file_md:
+                per_file_html = """
+                <div class="section">
+                    <div class="section-title">Per-File Analysis</div>
+                """
+
+                for file_name, content in per_file_md.items():
+                    # Convert markdown to HTML
+                    file_html = markdown.markdown(content, extensions=['tables', 'fenced_code'])
+
+                    # Create a collapsible section for each file
+                    per_file_html += f"""
+                    <div class="collapsible">
+                        <div class="collapsible-header">
+                            {file_name}
+                            <span class="collapsible-icon">▼</span>
+                        </div>
+                        <div class="collapsible-content">
+                            <div class="collapsible-inner markdown-content">
+                                {file_html}
+                            </div>
+                        </div>
+                    </div>
+                    """
+
+                per_file_html += """
+                </div>
+                """
+
+            # Generate the full HTML content with JavaScript for collapsible functionality
             html_content = f"""
             <!DOCTYPE html>
             <html lang="en">
@@ -376,8 +401,6 @@ class ExperimentsRouter(APIRouter):
 
                     {params_html}
 
-                    {documents_html}
-
                     {metering_html}
 
                     <div class="section">
@@ -387,8 +410,23 @@ class ExperimentsRouter(APIRouter):
                         </div>
                     </div>
 
+                    {per_file_html}
+
                     <a href="/v1/experiments" class="back-button">← Back to Experiments</a>
                 </div>
+
+                <script>
+                    // JavaScript for collapsible sections
+                    document.addEventListener('DOMContentLoaded', function() {{
+                        const collapsibles = document.querySelectorAll('.collapsible-header');
+
+                        collapsibles.forEach(function(collapsible) {{
+                            collapsible.addEventListener('click', function() {{
+                                this.parentElement.classList.toggle('active');
+                            }});
+                        }});
+                    }});
+                </script>
             </body>
             </html>
             """

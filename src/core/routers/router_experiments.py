@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import List
 
@@ -27,15 +28,26 @@ class ExperimentsRouter(APIRouter):
                 exp_params = EvalParams.model_validate_json(
                     d.joinpath("params.json").read_text()
                 )
+                completed = d.joinpath("analysis_overall.md").exists()
+                metrics = {}
+                if completed:
+                    metrics_file = d / "stage3_evaluation" / "metrics" / "comprehensive_answer.json"
+                    metrics_data = json.loads(metrics_file.read_text())["overall"]
+                    metrics = {
+                        "accuracy": metrics_data["accuracy"]["value"]
+                    }
+
                 experiments.append({
                     "id": d.name,
-                    "params": exp_params
+                    "params": exp_params,
+                    "completed": completed,
+                    "metrics": metrics
                 })
             except Exception as e:
                 error(f"failed to load experiment: {d.name}. Error: {e}")
 
         # Sort experiments by ID (which should be chronological)
-        experiments.sort(key=lambda x: x["id"])
+        experiments.sort(key=lambda x: x["id"], reverse=True)
 
         # Get unique datasets and assign colors
         unique_datasets = set(exp["params"].dataset_name for exp in experiments)
@@ -96,6 +108,8 @@ class ExperimentsRouter(APIRouter):
                     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
                     padding: 12px;
                     transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    display: flex;
+                    flex-direction: column;
                 }
                 .experiment-card:hover {
                     transform: translateY(-1px);
@@ -111,6 +125,12 @@ class ExperimentsRouter(APIRouter):
                     font-weight: 600;
                     font-size: 15px;
                     color: #333;
+                    display: flex;
+                    align-items: center;
+                }
+                .status-indicator {
+                    margin-left: 8px;
+                    font-size: 16px;
                 }
                 .dataset-pill {
                     display: inline-block;
@@ -124,6 +144,12 @@ class ExperimentsRouter(APIRouter):
                     margin-bottom: 8px;
                     font-size: 14px;
                     color: #555;
+                }
+                .experiment-footer {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-end;
+                    margin-top: auto;
                 }
                 .experiment-details {
                     display: flex;
@@ -141,6 +167,19 @@ class ExperimentsRouter(APIRouter):
                     font-weight: 500;
                     color: #888;
                     margin-right: 4px;
+                }
+                .metrics-container {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                    gap: 4px;
+                }
+                .metric-item {
+                    background-color: #f0f7ff;
+                    padding: 3px 8px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: 500;
                 }
                 footer {
                     text-align: center;
@@ -162,31 +201,52 @@ class ExperimentsRouter(APIRouter):
             dataset_name = params.dataset_name
             dataset_color = dataset_colors[dataset_name]
 
+            # Status indicator
+            status_emoji = "✅" if exp["completed"] else "❌"
+            status_title = "Completed" if exp["completed"] else "In Progress"
+
+            # Metrics display
+            metrics_html = ""
+            if exp["completed"] and "accuracy" in exp["metrics"]:
+                accuracy = exp["metrics"]["accuracy"]
+                accuracy_formatted = f"{accuracy:.1%}" if isinstance(accuracy, float) else accuracy
+                metrics_html = f"""
+                <div class="metrics-container">
+                    <div class="metric-item">Accuracy: {accuracy_formatted}</div>
+                </div>
+                """
+
             html_content += f"""
                     <a href="/v1/experiments/{exp["id"]}" style="text-decoration: none; color: inherit;">
                         <div class="experiment-card">
                             <div class="experiment-header">
-                                <div class="experiment-id">{exp["id"]}</div>
+                                <div class="experiment-id">
+                                    {exp["id"]}
+                                    <span class="status-indicator" title="{status_title}">{status_emoji}</span>
+                                </div>
                                 <div class="dataset-pill" style="background-color: {dataset_color};">{dataset_name}</div>
                             </div>
                             <div class="experiment-description">{params.description}</div>
-                            <div class="experiment-details">
-                                <div class="detail-item">
-                                    <span class="detail-label">Chat:</span>
-                                    <span>{params.chat_model}</span>
+                            <div class="experiment-footer">
+                                <div class="experiment-details">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Chat:</span>
+                                        <span>{params.chat_model}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Eval:</span>
+                                        <span>{params.chat_eval_model}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Processing:</span>
+                                        <span>{params.processing_strategy}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Save:</span>
+                                        <span>{params.save_strategy}</span>
+                                    </div>
                                 </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Eval:</span>
-                                    <span>{params.chat_eval_model}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Processing:</span>
-                                    <span>{params.processing_strategy}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Save:</span>
-                                    <span>{params.save_strategy}</span>
-                                </div>
+                                {metrics_html}
                             </div>
                         </div>
                     </a>
@@ -201,7 +261,6 @@ class ExperimentsRouter(APIRouter):
         """
 
         return HTMLResponse(content=html_content)
-
 
     async def _experiment_detail(self, experiment_id: str):
         experiment_dir = EVALUATIONS_DIR / experiment_id

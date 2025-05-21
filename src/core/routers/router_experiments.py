@@ -289,17 +289,26 @@ class ExperimentsRouter(APIRouter):
 
                 # Function to generate a metering card for each stage
                 def generate_metering_card(stage_name, stage_data):
+                    # Calculate totals for the stage
+                    total_requests = sum(item.requests_cnt for item in stage_data.values())
+                    total_messages = sum(item.messages_sent_cnt for item in stage_data.values())
+                    total_tokens_in = sum(item.tokens_in for item in stage_data.values())
+                    total_tokens_out = sum(item.tokens_out for item in stage_data.values())
+
                     card = f"""
                     <div class="metering-card">
                         <div class="metering-title">{stage_name}</div>
                         <table class="metering-table">
-                            <tr>
-                                <th>Model</th>
-                                <th>Requests</th>
-                                <th>Messages</th>
-                                <th>Tokens In</th>
-                                <th>Tokens Out</th>
-                            </tr>
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Requests</th>
+                                    <th>Messages</th>
+                                    <th>Tokens In</th>
+                                    <th>Tokens Out</th>
+                                </tr>
+                            </thead>
+                            <tbody>
                     """
 
                     for model, data in stage_data.items():
@@ -313,23 +322,32 @@ class ExperimentsRouter(APIRouter):
                             </tr>
                         """
 
-                    card += """
-                        </table>
+                    # Add totals row
+                    card += f"""
+                            <tr style="font-weight: 600; background-color: #f0f0f5;">
+                                <td>Total</td>
+                                <td>{total_requests}</td>
+                                <td>{total_messages}</td>
+                                <td>{total_tokens_in}</td>
+                                <td>{total_tokens_out}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                     </div>
                     """
                     return card
 
                 # Add cards for each metering stage
                 if metering.dataset_compose:
-                    metering_html += generate_metering_card("Dataset Compose", metering.dataset_compose)
+                    metering_html += generate_metering_card("Dataset Composition", metering.dataset_compose)
                 if metering.stage1:
-                    metering_html += generate_metering_card("Stage 1", metering.stage1)
+                    metering_html += generate_metering_card("Stage 1: Extraction", metering.stage1)
                 if metering.stage2:
-                    metering_html += generate_metering_card("Stage 2", metering.stage2)
+                    metering_html += generate_metering_card("Stage 2: Answers", metering.stage2)
                 if metering.stage3:
-                    metering_html += generate_metering_card("Stage 3", metering.stage3)
+                    metering_html += generate_metering_card("Stage 3: Evaluation", metering.stage3)
                 if metering.stage4:
-                    metering_html += generate_metering_card("Stage 4", metering.stage4)
+                    metering_html += generate_metering_card("Stage 4: Analysis", metering.stage4)
 
                 metering_html += """
                     </div>

@@ -1,42 +1,3 @@
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.4;
-    color: #333;
-    background-color: #f2f2f7;
-    margin: 0;
-    padding: 20px;
-}
-
-.container {
-    max-width: 800px;
-    margin: 0 auto;
-    background-color: white;
-    border-radius: 10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-}
-
-h1 {
-    color: #333;
-    margin-bottom: 20px;
-}
-
-.back-button {
-    display: inline-block;
-    margin-top: 20px;
-    padding: 8px 16px;
-    background-color: #f2f2f7;
-    color: #333;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: 500;
-    border: 1px solid #ddd;
-}
-
-.back-button:hover {
-    background-color: #e5e5ea;
-}
-
 /* New styles for experiment detail page */
 .section {
     margin-bottom: 30px;
@@ -71,39 +32,64 @@ h1 {
 
 .metering-section {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
 }
 
 .metering-card {
     background-color: #f9f9fb;
-    border-radius: 6px;
-    padding: 12px;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .metering-title {
     font-weight: 600;
-    margin-bottom: 8px;
-    font-size: 15px;
+    margin-bottom: 12px;
+    font-size: 16px;
+    color: #444;
 }
 
 .metering-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
+    border: 1px solid #e0e0e5;
 }
 
 .metering-table th {
     text-align: left;
-    padding: 4px;
+    padding: 8px;
     font-weight: 500;
-    color: #666;
+    color: #555;
+    background-color: #f0f0f5;
+    border-bottom: 1px solid #e0e0e5;
+    border-right: 1px solid #e0e0e5;
+}
+
+.metering-table th:last-child {
+    border-right: none;
 }
 
 .metering-table td {
-    padding: 4px;
+    padding: 8px;
     text-align: right;
+    border-bottom: 1px solid #e0e0e5;
+    border-right: 1px solid #e0e0e5;
+}
+
+.metering-table td:first-child {
+    text-align: left;
+    font-weight: 500;
+}
+
+.metering-table td:last-child {
+    border-right: none;
+}
+
+.metering-table tr:last-child td {
+    border-bottom: none;
 }
 
 /* Markdown content styling */

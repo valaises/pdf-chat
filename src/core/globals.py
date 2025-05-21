@@ -44,4 +44,4 @@ CONFIGS_DIR = BASE_DIR / "configs"
 CONFIGS_DIR.mkdir(parents=True, exist_ok=True)
 
 ASSETS = BASE_DIR / "assets"
-ASSETS_CSS = ASSETS / "CSS"
+ASSETS_CSS = ASSETS / "css"

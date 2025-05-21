@@ -191,7 +191,7 @@ class ExperimentsRouter(APIRouter):
         </html>
         """
 
-        html_content.replace("%EXPERIMENTS.CSS%", ASSETS_CSS.joinpath("experiments.css").read_text())
+        html_content = html_content.replace("%EXPERIMENTS.CSS%", ASSETS_CSS.joinpath("experiments.css").read_text())
 
         return HTMLResponse(content=html_content)
 
@@ -231,6 +231,6 @@ class ExperimentsRouter(APIRouter):
         </html>
         """
 
-        html_content.replace("%EXPERIMENT-DETAIL.CSS%", ASSETS_CSS.joinpath("experiment-detail.css").read_text())
+        html_content = html_content.replace("%EXPERIMENT-DETAIL.CSS%", ASSETS_CSS.joinpath("experiment-detail.css").read_text())
 
         return HTMLResponse(content=html_content)

@@ -13,7 +13,7 @@ class ExperimentsRouter(APIRouter):
         kwargs["tags"] = ["Experiments"]
         super().__init__(*args, **kwargs)
 
-        self.add_api_route("v1/experiments", self._experiments, methods=["GET"])
+        self.add_api_route("/v1/experiments", self._experiments, methods=["GET"])
 
     async def _experiments(self):
         evaluation_dirs: List[Path] = [d for d in EVALUATIONS_DIR.iterdir() if d.is_dir()]

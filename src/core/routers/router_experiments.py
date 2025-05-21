@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
 from core.globals import EVALUATIONS_DIR
@@ -15,6 +15,7 @@ class ExperimentsRouter(APIRouter):
         super().__init__(*args, **kwargs)
 
         self.add_api_route("/v1/experiments", self._experiments, methods=["GET"])
+        self.add_api_route("/v1/experiments/{experiment_id}", self._experiment_detail, methods=["GET"])
 
     async def _experiments(self):
         evaluation_dirs: List[Path] = [d for d in EVALUATIONS_DIR.iterdir() if d.is_dir()]
@@ -162,36 +163,109 @@ class ExperimentsRouter(APIRouter):
             dataset_color = dataset_colors[dataset_name]
 
             html_content += f"""
-                    <div class="experiment-card">
-                        <div class="experiment-header">
-                            <div class="experiment-id">{exp["id"]}</div>
-                            <div class="dataset-pill" style="background-color: {dataset_color};">{dataset_name}</div>
+                    <a href="/v1/experiments/{exp["id"]}" style="text-decoration: none; color: inherit;">
+                        <div class="experiment-card">
+                            <div class="experiment-header">
+                                <div class="experiment-id">{exp["id"]}</div>
+                                <div class="dataset-pill" style="background-color: {dataset_color};">{dataset_name}</div>
+                            </div>
+                            <div class="experiment-description">{params.description}</div>
+                            <div class="experiment-details">
+                                <div class="detail-item">
+                                    <span class="detail-label">Chat:</span>
+                                    <span>{params.chat_model}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Eval:</span>
+                                    <span>{params.chat_eval_model}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Processing:</span>
+                                    <span>{params.processing_strategy}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Save:</span>
+                                    <span>{params.save_strategy}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="experiment-description">{params.description}</div>
-                        <div class="experiment-details">
-                            <div class="detail-item">
-                                <span class="detail-label">Chat:</span>
-                                <span>{params.chat_model}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Eval:</span>
-                                <span>{params.chat_eval_model}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Processing:</span>
-                                <span>{params.processing_strategy}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Save:</span>
-                                <span>{params.save_strategy}</span>
-                            </div>
-                        </div>
-                    </div>
+                    </a>
             """
 
         html_content += """
                 </div>
                 <footer>Made with ❤️ at Coxit</footer>
+            </div>
+        </body>
+        </html>
+        """
+
+        return HTMLResponse(content=html_content)
+
+
+    async def _experiment_detail(self, experiment_id: str):
+        experiment_dir = EVALUATIONS_DIR / experiment_id
+
+        if not experiment_dir.exists() or not experiment_dir.is_dir():
+            raise HTTPException(status_code=404, detail=f"Experiment {experiment_id} not found")
+
+        try:
+            exp_params = EvalParams.model_validate_json(
+                experiment_dir.joinpath("params.json").read_text()
+            )
+        except Exception as e:
+            error(f"Failed to load experiment: {experiment_id}. Error: {e}")
+            raise HTTPException(status_code=500, detail=f"Error loading experiment data: {str(e)}")
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Experiment {experiment_id}</title>
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    line-height: 1.4;
+                    color: #333;
+                    background-color: #f2f2f7;
+                    margin: 0;
+                    padding: 20px;
+                }}
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                    background-color: white;
+                    border-radius: 10px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    padding: 20px;
+                }}
+                h1 {{
+                    color: #333;
+                    margin-bottom: 20px;
+                }}
+                .back-button {{
+                    display: inline-block;
+                    margin-top: 20px;
+                    padding: 8px 16px;
+                    background-color: #f2f2f7;
+                    color: #333;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-weight: 500;
+                    border: 1px solid #ddd;
+                }}
+                .back-button:hover {{
+                    background-color: #e5e5ea;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Experiment {experiment_id}</h1>
+                <p>Details for this experiment will be available soon.</p>
+                <a href="/v1/experiments" class="back-button">← Back to Experiments</a>
             </div>
         </body>
         </html>

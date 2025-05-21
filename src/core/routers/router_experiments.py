@@ -7,7 +7,9 @@ from fastapi.responses import HTMLResponse
 
 from core.globals import EVALUATIONS_DIR, ASSETS_CSS
 from core.logger import error
+from evaluation.metering import Metering
 from evaluation.save_results import EvalParams
+import markdown
 
 
 class ExperimentsRouter(APIRouter):
@@ -195,7 +197,6 @@ class ExperimentsRouter(APIRouter):
 
         return HTMLResponse(content=html_content)
 
-
     async def _experiment_detail(self, experiment_id: str):
         experiment_dir = EVALUATIONS_DIR / experiment_id
 
@@ -203,34 +204,178 @@ class ExperimentsRouter(APIRouter):
             raise HTTPException(status_code=404, detail=f"Experiment {experiment_id} not found")
 
         try:
+            # Load experiment data
             exp_params = EvalParams.model_validate_json(
                 experiment_dir.joinpath("params.json").read_text()
             )
+
+            # Check if analysis file exists
+            analysis_file = experiment_dir.joinpath("analysis_overall.md")
+            if analysis_file.exists():
+                anal_overall = analysis_file.read_text()
+                # Convert markdown to HTML
+                anal_overall_html = markdown.markdown(anal_overall, extensions=['tables', 'fenced_code'])
+            else:
+                anal_overall_html = "<p>Analysis not available yet.</p>"
+
+            # Load metering data if available
+            metering_file = experiment_dir.joinpath("metering.json")
+            if metering_file.exists():
+                metering = Metering.model_validate_json(metering_file.read_text())
+            else:
+                metering = None
+
+            # Generate HTML for experiment parameters table
+            params_html = """
+            <div class="section">
+                <div class="section-title">Experiment Parameters</div>
+                <table class="info-table">
+                    <tr>
+                        <th>Dataset</th>
+                        <td>{dataset_name}</td>
+                    </tr>
+                    <tr>
+                        <th>Description</th>
+                        <td>{description}</td>
+                    </tr>
+                    <tr>
+                        <th>Chat Model</th>
+                        <td>{chat_model}</td>
+                    </tr>
+                    <tr>
+                        <th>Evaluation Model</th>
+                        <td>{chat_eval_model}</td>
+                    </tr>
+                    <tr>
+                        <th>Processing Strategy</th>
+                        <td>{processing_strategy}</td>
+                    </tr>
+                    <tr>
+                        <th>Save Strategy</th>
+                        <td>{save_strategy}</td>
+                    </tr>
+                </table>
+            </div>
+            """.format(
+                dataset_name=exp_params.dataset_name,
+                description=exp_params.description,
+                chat_model=exp_params.chat_model,
+                chat_eval_model=exp_params.chat_eval_model,
+                processing_strategy=exp_params.processing_strategy,
+                save_strategy=exp_params.save_strategy
+            )
+
+            # Generate HTML for documents list
+            documents_html = """
+            <div class="section">
+                <div class="section-title">Evaluated Documents</div>
+                <ul>
+            """
+            for doc in exp_params.eval_documents:
+                documents_html += f"<li>{doc}</li>"
+            documents_html += """
+                </ul>
+            </div>
+            """
+
+            # Generate HTML for metering data if available
+            metering_html = ""
+            if metering:
+                metering_html = """
+                <div class="section">
+                    <div class="section-title">Metering Information</div>
+                    <div class="metering-section">
+                """
+
+                # Function to generate a metering card for each stage
+                def generate_metering_card(stage_name, stage_data):
+                    card = f"""
+                    <div class="metering-card">
+                        <div class="metering-title">{stage_name}</div>
+                        <table class="metering-table">
+                            <tr>
+                                <th>Model</th>
+                                <th>Requests</th>
+                                <th>Messages</th>
+                                <th>Tokens In</th>
+                                <th>Tokens Out</th>
+                            </tr>
+                    """
+
+                    for model, data in stage_data.items():
+                        card += f"""
+                            <tr>
+                                <td>{model}</td>
+                                <td>{data.requests_cnt}</td>
+                                <td>{data.messages_sent_cnt}</td>
+                                <td>{data.tokens_in}</td>
+                                <td>{data.tokens_out}</td>
+                            </tr>
+                        """
+
+                    card += """
+                        </table>
+                    </div>
+                    """
+                    return card
+
+                # Add cards for each metering stage
+                if metering.dataset_compose:
+                    metering_html += generate_metering_card("Dataset Compose", metering.dataset_compose)
+                if metering.stage1:
+                    metering_html += generate_metering_card("Stage 1", metering.stage1)
+                if metering.stage2:
+                    metering_html += generate_metering_card("Stage 2", metering.stage2)
+                if metering.stage3:
+                    metering_html += generate_metering_card("Stage 3", metering.stage3)
+                if metering.stage4:
+                    metering_html += generate_metering_card("Stage 4", metering.stage4)
+
+                metering_html += """
+                    </div>
+                </div>
+                """
+
+            # Generate the full HTML content
+            html_content = f"""
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Experiment {experiment_id}</title>
+                <style>
+                    %EXPERIMENT-DETAIL.CSS%
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Experiment {experiment_id}</h1>
+
+                    {params_html}
+
+                    {documents_html}
+
+                    {metering_html}
+
+                    <div class="section">
+                        <div class="section-title">Analysis Results</div>
+                        <div class="markdown-content">
+                            {anal_overall_html}
+                        </div>
+                    </div>
+
+                    <a href="/v1/experiments" class="back-button">← Back to Experiments</a>
+                </div>
+            </body>
+            </html>
+            """
+
+            html_content = html_content.replace("%EXPERIMENT-DETAIL.CSS%",
+                                                ASSETS_CSS.joinpath("experiment-detail.css").read_text())
+
+            return HTMLResponse(content=html_content)
+
         except Exception as e:
             error(f"Failed to load experiment: {experiment_id}. Error: {e}")
             raise HTTPException(status_code=500, detail=f"Error loading experiment data: {str(e)}")
-
-        html_content = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Experiment {experiment_id}</title>
-            <style>
-                %EXPERIMENT-DETAIL.CSS%
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Experiment {experiment_id}</h1>
-                <p>Details for this experiment will be available soon.</p>
-                <a href="/v1/experiments" class="back-button">← Back to Experiments</a>
-            </div>
-        </body>
-        </html>
-        """
-
-        html_content = html_content.replace("%EXPERIMENT-DETAIL.CSS%", ASSETS_CSS.joinpath("experiment-detail.css").read_text())
-
-        return HTMLResponse(content=html_content)

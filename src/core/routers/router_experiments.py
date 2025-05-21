@@ -32,7 +32,7 @@ class ExperimentsRouter(APIRouter):
             except Exception as e:
                 error(f"failed to load experiment: {d.name}. Error: {e}")
 
-        experiments.sort(key=lambda x: -x["id"])
+        experiments.sort(key=lambda x: x["id"])
 
         html_content = """
         <!DOCTYPE html>

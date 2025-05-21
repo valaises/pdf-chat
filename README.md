@@ -133,6 +133,11 @@ Hint: click on those elements to expand them, and view their internals
 
 Evaluation has a dedicated [README.md](https://github.com/COXIT-CO/chat-with-pdf-poc/tree/eval/src/evaluation)
 
+## Access Evaluation Results in GUI
+
+visit http://localhost:8011/v1/experiments to access interactive view format for finished evaluations
+![img.png](Drawings/v1_experiments.png)
+
 ## Technical Details
 
 ### Architecture

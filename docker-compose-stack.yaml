@@ -51,7 +51,7 @@ services:
     container_name: docs_mcp
     environment:
       - PROCESSING_STRATEGY=local_fs # openai_fs or local_fs
-      - SAVE_STRATEGY=milvus # only for local_fs: redis or milvus, else -> ""
+      - SAVE_STRATEGY=redis # only for local_fs: redis or milvus, else -> ""
       - OPENAI_API_KEY= # for embeddings
       - EMBEDDING_MODEL=text-embedding-3-small # only for local_fs
 

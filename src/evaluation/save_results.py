@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from core.configs import EvalConfig
 from core.globals import EVALUATIONS_DIR, PROCESSING_STRATEGY, SAVE_STRATEGY
+from core.logger import error
 from evaluation.dataset.dataset_init import DatasetEval
 from evaluation.dataset.dataset_metadata import DatasetFiles
 from evaluation.metering import Metering
@@ -52,6 +53,30 @@ class EvalParams(BaseModel):
 
     eval_documents: List[str]
 
+    def to_json(self) -> str:
+        """
+        Convert the model to a JSON string with proper error handling.
+        """
+        try:
+            # Use Pydantic's built-in JSON serialization
+            return self.model_dump_json(indent=2)
+        except Exception as e:
+            error(f"Failed to serialize EvalParams to JSON: {e}")
+
+            # Fallback approach - try to serialize each field individually
+            result = {}
+            for field_name in self.model_fields.keys():
+                try:
+                    field_value = getattr(self, field_name)
+                    # Test if the field can be serialized
+                    json.dumps(field_value)
+                    result[field_name] = field_value
+                except Exception as e:
+                    error(f"Failed to serialize field {field_name}: {e}")
+                    result[field_name] = f"Error: {e}"
+
+            return json.dumps(result, indent=2)
+
 
 def dump_eval_params(
         eval_dir: Path,
@@ -69,7 +94,7 @@ def dump_eval_params(
         chat_eval_model=eval_config.chat_eval_model,
         eval_documents=[d.file_name_orig for d in dataset_eval.eval_files],
     )
-    eval_dir.joinpath("params.json").write_text(eval_params.model_dump_json(indent=2))
+    eval_dir.joinpath("params.json").write_text(eval_params.to_json())
 
     eval_dir.joinpath("QID2Questions.json").write_text(
         json.dumps({q.id: q.question_text for q in dataset_eval.questions}, indent=2)

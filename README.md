@@ -57,51 +57,6 @@ Run Docker Compose Stack
 docker compose -f docker-compose-stack.yaml up --build
 ```
 
-### Create a User and your API KEY
-Create User:
-```sh
-curl -X POST http://localhost:7012/v1/users-create \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer secret" \
-  -d '{
-    "email": "user@example.com"
-  }'
-```
-Expected Response:
-```json
-{
-  "message": "User created successfully",
-  "object": "user",
-  "data": {
-    "user_id": 1,
-    "email": "user@example.com",
-    "created_at": "2025-05-13 11:10:58"
-  }
-}
-```
-Create API KEY:
-```sh
-curl -X POST http://localhost:7012/v1/keys-create \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer secret" \
-  -d '{
-    "user_id": 1,
-    "scope": ""
-  }'
-```
-Expected response:
-```json
-{
-  "message": "API key created successfully",
-  "object": "key",
-  "data": {
-    "api_key": "lpak-Qmm0R5dO-P1EpN7XzBfatw",
-    "scope": "",
-    "user_id": 1
-  }
-}
-```
-
 ### Specify Endpoints & API KEY in Chat UI
 
 In your browser open: [http://localhost:5173](http://localhost:5173)
@@ -109,7 +64,7 @@ Click on settings, and specify:
 #### Section: Connections
 API Endpoint: http://localhost:7016/v1
 
-API KEY: the one from previous step e.g. lpak-Qmm0R5dO-P1EpN7XzBfatw
+API KEY: admin1234
 #### Section: MCPL Servers
 Add Server: http://chat-with-pdf-poc:8011/v1
 

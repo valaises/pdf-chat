@@ -6,18 +6,20 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from core.globals import CONFIGS_DIR
+from evaluation.globals import EVAL_CHAT_ENDPOINT, EVAL_CHAT_ENDPOINT_API_KEY
+
 
 # todo: fix while dump into yaml, order gets sorted alphabetically
 class EvalConfig(BaseModel):
     __file_name: str = "eval_config.yaml"
     __file_path: Path = CONFIGS_DIR / __file_name
 
-    chat_endpoint: str = "http://llm_tools:7016/v1"
-    chat_endpoint_api_key: Optional[str] = None
+    chat_endpoint: str = EVAL_CHAT_ENDPOINT
+    chat_endpoint_api_key: Optional[str] = EVAL_CHAT_ENDPOINT_API_KEY
 
-    chat_model: str = "gemini-2.0-flash"
-    chat_eval_model: str = "gpt-4o"
-    chat_analyse_model: str = "claude-3.7-sonnet"
+    chat_model: str = "gemini-2.5-flash"
+    chat_eval_model: str = "gpt-4.1"
+    chat_analyse_model: str = "gemini-2.5-pro"
 
     semaphore_chat_limit: int = Field(default=10, ge=1, le=50)
     semaphore_eval_limit: int = Field(default=3, ge=1, le=50)

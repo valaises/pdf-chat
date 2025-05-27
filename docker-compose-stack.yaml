@@ -19,10 +19,12 @@ services:
     build: ./llm-proxy
     container_name: llm_proxy
     environment:
-     - LLM_PROXY_SECRET=secret
-     - OPENAI_API_KEY=${OPENAI_API_KEY}
-     - GEMINI_API_KEY=${GEMINI_API_KEY}
-     - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}}
+      - LLM_PROXY_SECRET="secret"
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+
+      - ADMIN_EMAIL=admin@default.com
+      - ADMIN_API_KEY=admin1234
     ports:
       - "7012:7012"
     volumes:
@@ -50,10 +52,17 @@ services:
     build: ./chat-with-pdf-poc
     container_name: docs_mcp
     environment:
-      - PROCESSING_STRATEGY=local_fs # openai_fs or local_fs
-      - SAVE_STRATEGY=redis # only for local_fs: redis or milvus, else -> ""
-      - OPENAI_API_KEY= # for embeddings
-      - EMBEDDING_MODEL=text-embedding-3-small # only for local_fs
+      # for embeddings
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # openai_fs or local_fs
+      - PROCESSING_STRATEGY=local_fs
+      # only for local_fs: redis or milvus, else -> ""
+      - SAVE_STRATEGY=redis
+      # only for local_fs
+      - EMBEDDING_MODEL=text-embedding-3-small
+
+      - EVAL_CHAT_ENDPOINT=http://llm_tools:7016/v1
+      - EVAL_CHAT_ENDPOINT_API_KEY=admin1234
 
     ports:
       - "8011:8011"

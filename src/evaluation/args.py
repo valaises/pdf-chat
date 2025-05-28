@@ -17,7 +17,13 @@ def parse_arguments() -> CMDArgs:
                         help='Path to the dataset directory containing PDF files for evaluation')
 
     args = parser.parse_args()
-    dataset_dir = DATASETS_DIR / args.dataset
+    if args.dataset is None:
+        raise Exception("Please provide a dataset path")
+
+    dataset_dir = Path(args.dataset)
+    if not dataset_dir.exists():
+        dataset_dir = DATASETS_DIR / args.dataset
+
     if not dataset_dir.exists():
         raise Exception(f"dataset_dir {dataset_dir} does not exist")
 

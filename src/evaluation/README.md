@@ -87,8 +87,13 @@ docker exec -it docs_mcp bash
 ```
 Then
 ```sh
-python src/evaluation/main.py --dataset dataset-test-1
+python src/evaluation/main.py --dataset dataset-test-1 --eval_details pass
 ```
+OR a single-line command
+```sh
+docker exec -it docs_mcp bash -c "python src/evaluation/main.py --dataset dataset-test-1 --eval_details pass"
+```
+
 Note: replace `--dataset` with your own dataset name 
 
 After execution is completed, you may find results in `chat-with-pdf/evaluations/XXXX`,\

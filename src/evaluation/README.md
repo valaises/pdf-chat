@@ -72,16 +72,12 @@ Evaluation MUST be run INSIDE a container where actual Chat-with-pdf server runs
 As it inserts data, such as paragraphs and embeddings into DB, which is accessed during Stage 2: Answers Generation,\
 where model makes calls to LLM_ENDPOINT=llmtools, which calls Chat-with-pdf server. 
 
-First, edit evaluation config\
-specify API key e.g. `lpak-1tlvJrANLovVTCV0Z7GvnQ` \
-if needed, alter model_names
-
+alter model names in config according to your preferences
 ```sh
 vim chat-with-pdf/configs/eval_config.yaml
 ```
 
 To execute evaluation, run the following commands:
-
 ```sh
 docker exec -it docs_mcp bash
 ```
@@ -92,6 +88,10 @@ python src/evaluation/main.py --dataset dataset-test-1 --eval_details pass
 OR a single-line command
 ```sh
 docker exec -it docs_mcp bash -c "python src/evaluation/main.py --dataset dataset-test-1 --eval_details pass"
+```
+If you want to use an example dataset
+```sh
+docker exec -it docs_mcp bash -c "python src/evaluation/main.py --dataset /app/assets/datasets/dataset-example --eval_details pass"
 ```
 
 Note: replace `--dataset` with your own dataset name 

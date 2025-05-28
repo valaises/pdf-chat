@@ -39,6 +39,8 @@ services:
     environment:
       # don't change
       - LLM_PROXY_ADDRESS=http://llm-proxy:7012/v1
+      # don't change
+      - DEFAULT_MCPL_SERVERS=${DEFAULT_MCPL_SERVERS:-}
     ports:
       - "7016:7016"
     volumes:

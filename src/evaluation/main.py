@@ -87,7 +87,10 @@ def main():
         assert tool_context.files_repository.create_file_sync(file), f"Failed to create record of file={file} in DB"
 
     eval_dir = get_next_evaluation_directory()
-    eval_details = prompt_user_for_evaluation_details()
+    eval_details = args.eval_details
+    if eval_details is None:
+        eval_details = prompt_user_for_evaluation_details()
+
     dump_eval_params(eval_dir, eval_details, dataset_eval, dataset_files, eval_config)
 
     try:

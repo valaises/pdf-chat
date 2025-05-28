@@ -37,12 +37,15 @@ services:
     build: ./llm-tools-server
     container_name: llm_tools
     environment:
-      - LLM_PROXY_ADDRESS=http://llm-proxy:7012/v1 # don't change
+      # don't change
+      - LLM_PROXY_ADDRESS=http://llm-proxy:7012/v1
+      # don't change
+      - DEFAULT_MCPL_SERVERS=[http://chat-with-pdf-poc:8011/v1]
     ports:
       - "7016:7016"
     volumes:
-      - llm-tool-db-volume:/app/db
       - ./logs/llm-tools:/app/logs
+      - llm-tool-db-volume:/app/db
       - shared-files-volume:/app/uploads
     restart: unless-stopped
     networks:

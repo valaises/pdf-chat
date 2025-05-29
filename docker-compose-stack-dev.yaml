@@ -47,7 +47,7 @@ services:
       - llm-network
 
   chat-with-pdf-poc:
-    build: ./chat-with-pdf-poc
+    build: .
     container_name: docs-mcp
     environment:
       # for embeddings

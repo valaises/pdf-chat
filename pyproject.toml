@@ -1,14 +1,7 @@
 [project]
 name = "chat-with-pdf-poc"
 
-# Use alpha (a) for early internal testing
-# Use beta (b) for wider testing when features are complete
-# Use release candidates (rc) for final pre-release testing
-# Use .devN for dev release
-# Use +experimental for experimental builds
-# Use incrementing numbers after each identifier
-
-version = "0.1.1a"
+version = "1.0.0-alpha"
 
 description = "Add your description here"
 readme = "README.md"

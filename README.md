@@ -24,37 +24,28 @@ This application provides a complete pipeline for:
 - **Vector Search**: Semantic search capabilities using OpenAI's vector stores
 - **Stateful Processing**: Track processing status of documents from upload to completion
 
-## Local Development
+## Installation
 
-create a directory for chat-with-pdf-stack
-
-```sh
-mkdir chat-with-pdf-stack && cd chat-with-pdf-stack
+Download docker-compose-stack.yaml
+```bash
+wget -O docker-compose-stack.yaml https://raw.githubusercontent.com/COXIT-CO/chat-with-pdf-poc/refs/heads/main/docker-compose-stack.yaml
 ```
 
-clone repositories needed for the stack
-
-```sh
-git clone https://github.com/valaises/llm-chat.git &&
-git clone https://github.com/valaises/llm-proxy.git &&
-git clone https://github.com/valaises/llm-tools-server.git &&
-git clone -b eval git@github.com:COXIT-CO/chat-with-pdf-poc.git 
+Start docker compose
+```bash
+docker compose -f docker-compose-stack.yaml up -d
 ```
 
-copy docker-compose-stack.yaml
+## Installation, Dev
 
-```sh
-cp chat-with-pdf-poc/docker-compose-stack.yaml docker-compose-stack.yaml 
+Clone repository 
+```bash
+git clone git@github.com:COXIT-CO/chat-with-pdf-poc.git
 ```
 
-specify environmental vars
-```sh
-vim docker-compose-stack.yaml
-```
-
-Run Docker Compose Stack
-```sh
-docker compose -f docker-compose-stack.yaml up --build
+Start docker compose
+```bash
+docker compose -f docker-compose-stack-dev.yaml up -d
 ```
 
 ### Specify Endpoints & API KEY in Chat UI

@@ -1,0 +1,46 @@
+name: Try Deploy Chat-with-PDF
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Start Docker Compose stack
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: docker compose -f docker-compose-stack-dev.yaml up -d
+
+      - name: Wait for services to be ready
+        run: sleep 60
+
+      - name: Check Docker container status
+        id: container_check
+        run: |
+          echo "## Docker Container Status" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          docker compose -f docker-compose-stack-dev.yaml ps >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if any containers are not running
+          NOT_RUNNING=$(docker compose -f docker-compose-stack-dev.yaml ps | grep -v "running" | grep -v "NAME" || true)
+          if [ -n "$NOT_RUNNING" ]; then
+            echo "::error::Some containers are not running properly!"
+            echo "Containers not running:" >> $GITHUB_STEP_SUMMARY
+            echo "```" >> $GITHUB_STEP_SUMMARY
+            echo "$NOT_RUNNING" >> $GITHUB_STEP_SUMMARY
+            echo "```" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "All containers are running properly." >> $GITHUB_STEP_SUMMARY
+          fi

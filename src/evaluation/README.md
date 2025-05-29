@@ -79,7 +79,7 @@ vim chat-with-pdf/configs/eval_config.yaml
 
 To execute evaluation, run the following commands:
 ```sh
-docker exec -it docs_mcp bash
+docker exec -it docs-mcp bash
 ```
 Then
 ```sh
@@ -87,11 +87,11 @@ python src/evaluation/main.py --dataset dataset-test-1 --eval_details pass
 ```
 OR a single-line command
 ```sh
-docker exec -it docs_mcp bash -c "python src/evaluation/main.py --dataset dataset-test-1 --eval_details pass"
+docker exec -it docs-mcp bash -c "python src/evaluation/main.py --dataset dataset-test-1 --eval_details pass"
 ```
 If you want to use an example dataset
 ```sh
-docker exec -it docs_mcp bash -c "python src/evaluation/main.py --dataset /app/assets/datasets/dataset-example --eval_details pass"
+docker exec -it docs-mcp bash -c "python src/evaluation/main.py --dataset /app/assets/datasets/dataset-example --eval_details pass"
 ```
 
 Note: replace `--dataset` with your own dataset name 

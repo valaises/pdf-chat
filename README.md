@@ -40,7 +40,7 @@ docker compose -f docker-compose-stack.yaml up -d
 
 Clone repository 
 ```bash
-git clone git@github.com:COXIT-CO/chat-with-pdf-poc.git
+git clone -b eval git@github.com:COXIT-CO/chat-with-pdf-poc.git
 ```
 
 Start docker compose

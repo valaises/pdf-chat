@@ -1,6 +1,6 @@
 services:
   llm-chat:
-    image: oasis4691/llm-chat:0.1.0
+    image: oasis4691/llm-chat:0.1.2
     container_name: llm-chat
     volumes:
       - ./llm-chat:/app
@@ -11,7 +11,7 @@ services:
       - llm-network
 
   llm-portal:
-    image: oasis4691/llm-portal:0.1.1
+    image: oasis4691/llm-portal:0.1.2
     container_name: llm-portal
     environment:
       - LLM_PROXY_SECRET="secret"
@@ -29,7 +29,7 @@ services:
       - llm-network
 
   llm-tools-server:
-    image: oasis4691/llm-tools-server:0.2.0
+    image: oasis4691/llm-tools-server:0.2.1
     container_name: llm-tools
     environment:
       # don't change

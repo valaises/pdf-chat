@@ -47,7 +47,7 @@ services:
       - llm-network
 
   chat-with-pdf-poc:
-    image: oasis4691/chat-with-pdf-poc:latest
+    image: coxit/chat-with-pdf-poc:latest
     container_name: docs-mcp
     environment:
       # for embeddings

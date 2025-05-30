@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - 'assets/datasets/dataset-example/**'
+      - 'src/evaluation/**'
 
 jobs:
   run-evaluation:
@@ -29,7 +32,7 @@ jobs:
 
       - name: Run evaluation script and wait for completion
         run: |
-          docker exec docs-mcp bash -c "python src/evaluation/main.py --dataset /app/assets/datasets/dataset-for-actions --eval_details pass"
+          docker exec docs-mcp bash -c "python src/evaluation/main.py --dataset /app/assets/datasets/dataset-example --eval_details pass"
           echo "Evaluation completed successfully!"
 
       - name: Collect evaluation results

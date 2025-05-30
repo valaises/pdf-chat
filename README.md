@@ -31,6 +31,16 @@ Download docker-compose-stack.yaml
 wget -O docker-compose-stack.yaml https://raw.githubusercontent.com/COXIT-CO/chat-with-pdf-poc/refs/heads/main/docker-compose-stack.yaml
 ```
 
+Set in your environment following variables:\
+OPENAI_API_KEY and OPENROUTER_API_KEY
+
+[read more about openrouter](https://openrouter.ai/docs/faq) -- a unified API interface to LLMs
+
+verify that:
+```sh
+printenv | grep -E 'OPENAI_API_KEY|OPENROUTER_API_KEY'
+```
+
 Start docker compose
 ```bash
 docker compose -f docker-compose-stack.yaml up -d
@@ -40,7 +50,22 @@ docker compose -f docker-compose-stack.yaml up -d
 
 Clone repository 
 ```bash
-git clone -b eval git@github.com:COXIT-CO/chat-with-pdf-poc.git
+git clone -b eval https://github.com/COXIT-CO/chat-with-pdf-poc.git
+```
+
+cd into directory
+```sh
+cd chat-with-pdf-poc
+```
+
+Set in your environment following variables:\
+OPENAI_API_KEY and OPENROUTER_API_KEY
+
+[read more about openrouter](https://openrouter.ai/docs/faq) -- a unified API interface to LLMs
+
+verify that:
+```sh
+printenv | grep -E 'OPENAI_API_KEY|OPENROUTER_API_KEY'
 ```
 
 Start docker compose

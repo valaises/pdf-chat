@@ -1,12 +1,12 @@
-name: Try Deploy and Evaluate Chat-with-PDF
+name: Try Deploy and Evaluate pdf-chat
 
 on:
   workflow_dispatch:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - 'assets/datasets/dataset-example/**'
-      - 'src/evaluation/**'
+#  pull_request:
+#    types: [opened, synchronize, reopened]
+#    paths:
+#      - 'assets/datasets/dataset-example/**'
+#      - 'src/evaluation/**'
 
 jobs:
   run-evaluation:

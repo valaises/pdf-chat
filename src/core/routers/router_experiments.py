@@ -187,7 +187,7 @@ class ExperimentsRouter(APIRouter):
 
         html_content += """
                 </div>
-                <footer>Made with ❤️ at Coxit</footer>
+                <footer>Made with ❤️ by V4LER11</footer>
             </div>
         </body>
         </html>

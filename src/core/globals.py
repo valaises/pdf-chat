@@ -3,7 +3,7 @@ from pathlib import Path
 from importlib.metadata import version
 
 
-VERSION = version("chat-with-pdf-poc")
+VERSION = version("pdf-chat")
 
 
 PROCESSING_STRATEGY = os.environ.get("PROCESSING_STRATEGY")

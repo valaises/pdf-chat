@@ -1,9 +1,9 @@
-name: Try Deploy Chat-with-PDF
+name: Try Deploy pdf-chat
 
 on:
   workflow_dispatch:
-  pull_request:
-    types: [opened, synchronize, reopened]
+#  pull_request:
+#    types: [opened, synchronize, reopened]
 
 jobs:
   deploy:

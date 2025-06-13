@@ -28,7 +28,7 @@ This application provides a complete pipeline for:
 
 Download docker-compose-stack.yaml
 ```bash
-wget -O docker-compose-stack.yaml https://raw.githubusercontent.com/COXIT-CO/chat-with-pdf-poc/refs/heads/main/docker-compose-stack.yaml
+wget -O docker-compose-stack.yaml https://raw.githubusercontent.com/valaises/pdf-chat/refs/heads/main/docker-compose-stack.yaml
 ```
 
 Set in your environment following variables:\
@@ -50,12 +50,12 @@ docker compose -f docker-compose-stack.yaml up -d
 
 Clone repository 
 ```bash
-git clone -b eval https://github.com/COXIT-CO/chat-with-pdf-poc.git
+git clone -b eval https://github.com/valaises/pdf-chat.git
 ```
 
 cd into directory
 ```sh
-cd chat-with-pdf-poc
+cd pdf-chat
 ```
 
 Set in your environment following variables:\
@@ -82,7 +82,7 @@ API Endpoint: http://localhost:7016/v1
 
 API KEY: admin1234
 #### Section: MCPL Servers
-Add Server: http://chat-with-pdf-poc:8011/v1
+Add Server: http://pdf-chat:8011/v1
 
 ### Head back to Chat
 
@@ -102,7 +102,7 @@ Hint: click on those elements to expand them, and view their internals
 
 ## Evaluation
 
-Evaluation has a dedicated [README.md](https://github.com/COXIT-CO/chat-with-pdf-poc/tree/eval/src/evaluation)
+Evaluation has a dedicated [README.md](https://github.com/valaises/pdf-chat/tree/eval/src/evaluation)
 
 ## Access Evaluation Results in GUI
 
@@ -150,7 +150,7 @@ The application follows a modular architecture with these key components:
 2. **Extraction Phase**:
    - The extractor worker monitors for new files
    - When a new file is detected, text is extracted from the PDF
-   - Extraction uses the coxit library to parse paragraphs and sections, assign highlight coordinates
+   - Extraction parses paragraphs and sections, assign highlight coordinates
    - Status is updated to `"extracted"` when complete
 
 3. **Processing Phase**:

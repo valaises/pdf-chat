@@ -46,8 +46,8 @@ services:
     networks:
       - llm-network
 
-  chat-with-pdf-poc:
-    image: coxit/chat-with-pdf-poc:latest
+  pdf-chat:
+    image: oasis4691/pdf-chat:latest
     container_name: docs-mcp
     environment:
       # for embeddings
@@ -65,13 +65,13 @@ services:
     ports:
       - "8011:8011"
     volumes:
-      - ./chat-with-pdf/telemetry:/app/telemetry
-      - ./chat-with-pdf/configs:/app/configs
-      - ./logs/chat-with-pdf:/app/logs
-      - ./chat-with-pdf/evaluations:/app/evaluations
-      - ./chat-with-pdf/datasets:/app/datasets
+      - ./docs-mcp/telemetry:/app/telemetry
+      - ./docs-mcp/configs:/app/configs
+      - ./logs/docs-mcp:/app/logs
+      - ./docs-mcp/evaluations:/app/evaluations
+      - ./docs-mcp/datasets:/app/datasets
       - shared-files-volume:/app/files
-      - chat-with-pdf-db-volume:/app/db
+      - docs-mcp-db-volume:/app/db
     restart: unless-stopped
     networks:
       - llm-network
@@ -96,6 +96,6 @@ networks:
 volumes:
   llm-portal-db-volume:
   llm-tool-db-volume:
-  chat-with-pdf-db-volume:
+  docs-mcp-db-volume:
   shared-files-volume:
   redis-data-volume:

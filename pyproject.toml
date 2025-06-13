@@ -1,7 +1,7 @@
 [project]
-name = "chat-with-pdf-poc"
+name = "pdf-chat"
 
-version = "1.0.0-alpha"
+version = "1.0.1"
 
 description = "Add your description here"
 readme = "README.md"
